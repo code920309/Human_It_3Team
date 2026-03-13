@@ -29,17 +29,6 @@ export default function MyPage() {
                 const years = yearsRes.data.data.availableYears;
                 setAvailableYears(years);
 
-                // Use realistic mock data for chart trend if only one year data exists
-                const mockHistory = [
-                    { date: '2025-10', score: 74 },
-                    { date: '2025-11', score: 76 },
-                    { date: '2025-12', score: 79 },
-                    { date: '2026-01', score: 80 },
-                    { date: '2026-02', score: 82 }
-                ];
-                // If there are multiple years, we could map them, but for now using the requested mock for visual
-                setHistory(mockHistory);
-
                 if (years.length > 0) {
                     await fetchReport(years[0]);
                     setSelectedYear(years[0]);

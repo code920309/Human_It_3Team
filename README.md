@@ -50,12 +50,5 @@ npm install
 npm run dev
 ```
 
-## 🔍 UI 미리보기 모드 (Preview Mode)
-
-백엔드 연동이나 실제 데이터 없이 UI 완성본을 바로 확인하려면 아래 URL을 이용하세요.
-
-- **대시보드 미리보기**: `http://localhost:5173/mypage?preview=true`
-- **리포트 미리보기**: `http://localhost:5173/report?preview=true`
-
 ---
 © 2026 CareLink Team. All Rights Reserved.
