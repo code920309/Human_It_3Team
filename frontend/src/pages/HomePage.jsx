@@ -15,7 +15,7 @@ export default function HomePage() {
     <div className="flex flex-col min-h-screen">
       {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-orange-100 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <div className="flex-shrink-0 flex items-center">
               <Link to="/" className="text-2xl font-extrabold text-teal-600 flex items-center gap-2">
@@ -48,7 +48,7 @@ export default function HomePage() {
       </nav>
 
       {/* Main Slider */}
-      <section className="relative h-[650px]">
+      <section className="relative h-[600px]">
         <Swiper
           spaceBetween={0}
           centeredSlides={true}
@@ -56,7 +56,7 @@ export default function HomePage() {
           pagination={{ clickable: true }}
           navigation={true}
           modules={[Autoplay, Pagination, Navigation]}
-          className="h-full"
+          className="h-[600px]"
         >
           {/* Slide 1 - 서비스 소개 */}
           <SwiperSlide>
@@ -152,7 +152,7 @@ export default function HomePage() {
 
       {/* Reviews */}
       <section className="py-24 bg-[#f9f7f0]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">사용자 후기</h2>
             <div className="w-20 h-1 bg-teal-500 mx-auto rounded-full"></div>
@@ -178,7 +178,7 @@ export default function HomePage() {
 
       {/* Video */}
       <section className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8">
           {/* Section Title */}
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">
@@ -188,16 +188,15 @@ export default function HomePage() {
           </div>
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Video */}
-            <div className="aspect-video rounded-xl overflow-hidden shadow-xl">
+            <div className="w-full max-w-5xl mx-auto">
               <iframe
-                width="560"
-                height="315"
+                className="w-full aspect-video"
                 src="https://www.youtube.com/embed/yHY5bhh9JLk?si=at7MAVHObW7zx-uZ"
                 title="YouTube video player"
-                frameborder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                referrerpolicy="strict-origin-when-cross-origin" allowfullscreen>
-              </iframe>
+                referrerPolicy="strict-origin-when-cross-origin" 
+                allowFullScreen
+              ></iframe>
             </div>
             <div>
               <p className="text-lg text-slate-600 mb-6 leading-relaxed">
@@ -239,7 +238,7 @@ export default function HomePage() {
             <div>
               <h3 className="text-2xl font-extrabold mb-8 text-slate-900">문의하기</h3>
               <form className="space-y-4">
-                <input className="w-full bg-slate-50 border border-slate-200 rounded-lg py-4 px-4 focus:ring-2 focus:ring-teal-500 outline-none" placeholder="제목" type="text" />
+                <input className="w-full bg-slate-50 border border-slate-200 rounded-lg py-4 px-4 focus:ring-2 focus:ring-teal-500 outline-none" placeholder="이메일" type="text" />
                 <textarea className="w-full bg-slate-50 border border-slate-200 rounded-lg py-4 px-4 focus:ring-2 focus:ring-teal-500 outline-none" placeholder="메시지" rows={4}></textarea>
                 <button 
                   type="button"
