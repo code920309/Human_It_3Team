@@ -16,17 +16,21 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
-// Routes
-app.use('/api/contacts', contactRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/chatbot', chatbotRoutes);
-app.use('/api/action-plans', actionPlanRoutes);
+// API Router
+const apiRouter = express.Router();
+apiRouter.use('/contacts', contactRoutes);
+apiRouter.use('/auth', authRoutes);
+apiRouter.use('/reports', reportRoutes);
+apiRouter.use('/chatbot', chatbotRoutes);
+apiRouter.use('/action-plans', actionPlanRoutes);
 
-// Basic Route
-app.get('/', (req, res) => {
-    res.send('CareLink Backend API is running...');
-});
+// Mount the API router at both common prefixes
+app.use('/api', apiRouter);
+app.use('/.netlify/functions/api', apiRouter);
+
+// Basic Route for health check
+app.get('/', (req, res) => res.send('CareLink Backend API is running...'));
+app.get('/.netlify/functions/api', (req, res) => res.send('CareLink Backend API (Netlify) is running...'));
 
 // Export app for serverless functions
 module.exports = app;
