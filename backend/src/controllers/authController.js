@@ -105,10 +105,12 @@ exports.login = async (req, res) => {
         );
         
         if (users.length === 0) {
+            const bodyType = typeof req.body;
             const bodyKeys = Object.keys(req.body || {}).join(', ');
+            const bodyPreview = JSON.stringify(req.body).substring(0, 100);
             return res.status(400).json({ 
                 success: false, 
-                message: `가입되지 않은 이메일입니다. (입력길이: ${email.length}, Body keys: [${bodyKeys}])` 
+                message: `가입되지 않은 이메일입니다. (입력: [${email}], 길이: ${email.length}, 타입: ${bodyType}, 키: [${bodyKeys}], 내용: ${bodyPreview})` 
             });
         }
 

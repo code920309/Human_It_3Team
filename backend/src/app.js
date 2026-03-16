@@ -13,35 +13,44 @@ const chatbotRoutes = require('./routes/chatbotRoutes');
 const actionPlanRoutes = require('./routes/actionPlanRoutes');
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ type: '*/*' })); // Try parsing everything as JSON
 app.use(express.urlencoded({ extended: true }));
 
 // Serverless Body Parser Fix
 app.use((req, res, next) => {
-    // 1. Handle indexed objects (e.g., { 0: '{', 1: '"', ... })
-    // Detect if keys are only numbers (telltale sign of fragmented body)
+    // 1. Check if serverless event body is available but req.body is not
+    if ((!req.body || Object.keys(req.body).length === 0) && req.apiGateway && req.apiGateway.event && req.apiGateway.event.body) {
+        try {
+            let eventBody = req.apiGateway.event.body;
+            if (req.apiGateway.event.isBase64Encoded) {
+                eventBody = Buffer.from(eventBody, 'base64').toString('utf8');
+            }
+            req.body = JSON.parse(eventBody);
+        } catch (e) {
+            // Not JSON
+        }
+    }
+
+    // 2. Handle indexed objects (e.g., { 0: '{', 1: '"', ... })
     const keys = Object.keys(req.body || {});
     const isIndexed = keys.length > 0 && keys.every(key => !isNaN(key));
 
     if (isIndexed && req.body[0] !== undefined) {
         try {
-            const rawBody = Object.values(req.body).join('');
-            req.body = JSON.parse(rawBody);
+            const reconstructed = Object.values(req.body).join('');
+            req.body = JSON.parse(reconstructed);
         } catch (e) {
-            // Re-parsing error handled elsewhere
+            // Fail silently, maybe it's not JSON
         }
     }
 
-    // 2. Fallback to rawBody if still empty or not parsed correctly
-    if (!req.body || Object.keys(req.body).length === 0 || (!req.body.email && !req.body.password)) {
-        if (req.rawBody) {
-            try {
-                req.body = JSON.parse(req.rawBody.toString());
-            } catch (e) {
-                // Ignore
-            }
-        }
+    // 3. Fallback for string body
+    if (typeof req.body === 'string') {
+        try {
+            req.body = JSON.parse(req.body);
+        } catch (e) {}
     }
+
     next();
 });
 
