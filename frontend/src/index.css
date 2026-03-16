@@ -1,16 +1,47 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap');
-
-body {
-  font-family: 'Manrope', sans-serif;
-  @apply bg-[#fcfaf2] text-slate-800 overflow-x-hidden;
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-brand-50: #f0fdfa;
+  --color-brand-100: #ccfbf1;
+  --color-brand-500: #14b8a6;
+  --color-brand-600: #0d9488;
+  --color-brand-700: #0f766e;
+  
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.75rem;
 }
 
-.hero-gradient {
-  background: linear-gradient(rgba(15, 23, 42, 0.6), rgba(15, 23, 42, 0.6)), url('https://images.unsplash.com/photo-1576091160550-2173dba999ef?q=80&w=2070&auto=format&fit=crop');
-  background-size: cover;
-  background-position: center;
+@layer base {
+  body {
+    @apply bg-[#f8fafc] text-slate-900 antialiased;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white border border-slate-100 shadow-sm rounded-3xl;
+  }
+  
+  .premium-shadow {
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04), 0 4px 10px -5px rgba(0, 0, 0, 0.02);
+  }
+}
+
+.markdown-body {
+  @apply text-slate-600 leading-relaxed;
+}
+
+.markdown-body h1, .markdown-body h2, .markdown-body h3 {
+  @apply text-slate-900 font-bold mt-6 mb-3;
+}
+
+.markdown-body p {
+  @apply mb-4;
+}
+
+.markdown-body ul {
+  @apply list-disc ml-5 mb-4 space-y-2;
 }

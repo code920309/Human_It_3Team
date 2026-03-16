@@ -1,0 +1,62 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "사용자 프로필 정보",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "gender": { "type": "string", "enum": ["male", "female", "other"] },
+        "age": { "type": "integer" }
+      },
+      "required": ["id", "email", "name", "gender", "age"]
+    },
+    "HealthReport": {
+      "title": "Health Report",
+      "description": "건강 검진 분석 보고서",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string", "description": "소유자 UID" },
+        "date": { "type": "string", "format": "date-time" },
+        "score": { "type": "number" },
+        "summary": { "type": "string" },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "value": { "type": "number" },
+              "unit": { "type": "string" },
+              "referenceRange": { "type": "string" },
+              "status": { "type": "string", "enum": ["normal", "caution", "danger"] }
+            }
+          }
+        },
+        "actionPlan": {
+          "type": "object",
+          "properties": {
+            "diet": { "type": "array", "items": { "type": "string" } },
+            "exercise": { "type": "array", "items": { "type": "string" } },
+            "lifestyle": { "type": "array", "items": { "type": "string" } },
+            "medicalAdvice": { "type": "string" }
+          }
+        }
+      },
+      "required": ["id", "userId", "date", "score", "summary", "metrics", "actionPlan"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "사용자 개인 정보"
+    },
+    "/users/{userId}/reports/{reportId}": {
+      "schema": "HealthReport",
+      "description": "사용자별 건강 보고서 목록"
+    }
+  }
+}
