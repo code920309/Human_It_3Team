@@ -25,17 +25,28 @@ We implemented a custom **Body Recovery Middleware** in `app.js` that:
 ### Solution
 Switched connection geometry to use **Supabase Transaction Pooler (Port 6543)**. This ensures compatibility with IPv4-only networks and optimizes connection counts for serverless functions.
 
-## 3. Deployment & Build Summary
+## 3. Major Feature Implementation: MyPage (Dashboard)
+During the development phase, the MyPage was extensively refactored to provide a premium, data-driven experience.
+
+### Key Enhancements
+- **Dynamic Grid Layout**: Fixed the layout issue to ensure a responsive 2x2 grid (AI Comments > Health Score/Report > Trend Chart > Action Plan).
+- **Multi-Year Data Support**: Implemented logic to fetch available exam years (`/reports/years`) and automatically load the most recent record.
+- **AI-Driven Summaries**: Integrated a dedicated section at the top of the dashboard for AI-generated health comments, using `framer-motion` for smooth entry animations.
+- **Visual Feedback**: Added `Loader2` spin animations and transition effects to improve the perceived performance during AI data analysis.
+
+## 4. Deployment & Build Summary
 - **Successful Build Version**: `f2ff37d` (and subsequent cleanup commits).
 - **Key Files Modified**:
     - `backend/src/app.js`: Implementation of the body recovery logic.
     - `backend/src/config/db.js`: Optimization for PostgreSQL/Supabase.
     - `frontend/src/api/axios.js`: Explicit `Content-Type` and dynamic base URL detection.
+    - `frontend/src/pages/MyPage.jsx`: Grid layout and API integration logic.
     - `backend/src/services/geminiService.js`: Buffer-based image handling for serverless.
 
-## 4. Collaborative Impact
+## 5. Collaborative Impact
 - **Developer Experience**: Team members can now deploy seamlessly without worrying about infrastructure-specific body parsing bugs.
 - **Portability**: The code is now cloud-agnostic, working equally well on local Express servers and Netlify/AWS Lambda.
+- **Portfolio Value**: The project demonstrates deep expertise in handling serverless edge cases and complex frontend state management.
 
 ---
 *Prepared for the CareLink Development Team Portfolio*
