@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 import { motion } from 'framer-motion';
 import { Heart, Loader2, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -30,11 +30,8 @@ export default function MyPage() {
     const fetchInitialData = async () => {
         setLoading(true);
         try {
-            const token = localStorage.getItem('carelink_token');
             // 사용 가능한 검진 연도 목록 API 호출
-            const yearsRes = await axios.get('http://localhost:5000/api/reports/years', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const yearsRes = await api.get('/reports/years');
 
             if (yearsRes.data.success) {
                 const years = yearsRes.data.data.availableYears;
@@ -63,10 +60,7 @@ export default function MyPage() {
     // 특정 연도의 상세 건강 리포트 데이터를 호출하는 함수
     const fetchReport = async (year) => {
         try {
-            const token = localStorage.getItem('carelink_token');
-            const res = await axios.get(`http://localhost:5000/api/reports/health?year=${year}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.get(`/reports/health?year=${year}`);
             if (res.data.success) {
                 setReportData(res.data.data);
             }

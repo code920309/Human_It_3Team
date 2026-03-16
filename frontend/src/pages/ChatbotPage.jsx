@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 import { Heart, ChevronLeft, Send, Bot, User, Loader2, AlertCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
@@ -25,10 +25,7 @@ export default function ChatbotPage() {
 
   const fetchHistory = async () => {
     try {
-      const token = localStorage.getItem('carelink_token');
-      const res = await axios.get('http://localhost:5000/api/chatbot/history', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get('/chatbot/history');
       if (res.data.success && res.data.data.length > 0) {
         setMessages(res.data.data);
       }
@@ -49,11 +46,7 @@ export default function ChatbotPage() {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('carelink_token');
-      const res = await axios.post('http://localhost:5000/api/chatbot/message', 
-        { message: userMsgText },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await api.post('/chatbot/message', { message: userMsgText });
 
       if (res.data.success) {
         setMessages(prev => [...prev, { role: 'assistant', content: res.data.data.aiResponse }]);

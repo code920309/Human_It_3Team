@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 import { Heart, ChevronLeft, Download, AlertCircle, CheckCircle2, Info, Loader2 } from 'lucide-react';
 
 export default function HealthReport() {
@@ -16,10 +16,7 @@ export default function HealthReport() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('carelink_token');
-      const res = await axios.get(`http://localhost:5000/api/reports/health${year ? `?year=${year}` : ''}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const res = await api.get(`/reports/health${year ? `?year=${year}` : ''}`);
       if (res.data.success) {
         setData(res.data.data);
       }

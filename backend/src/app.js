@@ -28,8 +28,13 @@ app.get('/', (req, res) => {
     res.send('CareLink Backend API is running...');
 });
 
-// Port Settings
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+// Export app for serverless functions
+module.exports = app;
+
+// Port Settings (Only run listen if not in a serverless environment)
+if (require.main === module) {
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+    });
+}

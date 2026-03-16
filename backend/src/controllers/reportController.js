@@ -54,10 +54,38 @@ exports.uploadReport = async (req, res) => {
 
         if (existingData.length > 0) {
             healthDataId = existingData[0].id;
-            await pool.query('UPDATE health_data SET ? WHERE id = ?', [healthDataFields, healthDataId]);
+            await pool.query(
+                `UPDATE health_data SET 
+                    waist = ?, blood_pressure_s = ?, blood_pressure_d = ?, fasting_glucose = ?, 
+                    tg = ?, hdl = ?, ldl = ?, ast = ?, alt = ?, gamma_gtp = ?, bmi = ?, 
+                    health_score = ?, source_type = ? 
+                WHERE id = ?`,
+                [
+                    healthDataFields.waist, healthDataFields.blood_pressure_s, healthDataFields.blood_pressure_d, 
+                    healthDataFields.fasting_glucose, healthDataFields.tg, healthDataFields.hdl, 
+                    healthDataFields.ldl, healthDataFields.ast, healthDataFields.alt, 
+                    healthDataFields.gamma_gtp, healthDataFields.bmi, healthDataFields.health_score, 
+                    healthDataFields.source_type, healthDataId
+                ]
+            );
         } else {
-            const [result] = await pool.query('INSERT INTO health_data SET ?', [healthDataFields]);
-            healthDataId = result.insertId;
+            const [result] = await pool.query(
+                `INSERT INTO health_data (
+                    user_id, exam_year, waist, blood_pressure_s, blood_pressure_d, fasting_glucose, 
+                    tg, hdl, ldl, ast, alt, gamma_gtp, bmi, health_score, source_type
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    healthDataFields.user_id, healthDataFields.exam_year, healthDataFields.waist, 
+                    healthDataFields.blood_pressure_s, healthDataFields.blood_pressure_d, 
+                    healthDataFields.fasting_glucose, healthDataFields.tg, healthDataFields.hdl, 
+                    healthDataFields.ldl, healthDataFields.ast, healthDataFields.alt, 
+                    healthDataFields.gamma_gtp, healthDataFields.bmi, healthDataFields.health_score, 
+                    healthDataFields.source_type
+                ]
+            );
+            // In PostgreSQL with pg, there's no insertId on result usually unless returning.
+            // But my db.js wrapper mimics mysql2. For PG it won't have result.insertId unless I fix db.js
+            healthDataId = result.insertId || (result[0] && result[0].id);
         }
 
         // 4. Save to ai_reports
@@ -82,9 +110,33 @@ exports.uploadReport = async (req, res) => {
         );
 
         if (existingReport.length > 0) {
-            await pool.query('UPDATE ai_reports SET ? WHERE id = ?', [aiReportFields, existingReport[0].id]);
+            await pool.query(
+                `UPDATE ai_reports SET 
+                    summary = ?, medical_recommendation = ?, risk_overview = ?, 
+                    organ_heart_status = ?, organ_liver_status = ?, organ_pancreas_status = ?, 
+                    organ_abdomen_status = ?, organ_vessels_status = ?, analysis_precision = ? 
+                WHERE id = ?`,
+                [
+                    aiReportFields.summary, aiReportFields.medical_recommendation, aiReportFields.risk_overview,
+                    aiReportFields.organ_heart_status, aiReportFields.organ_liver_status, aiReportFields.organ_pancreas_status,
+                    aiReportFields.organ_abdomen_status, aiReportFields.organ_vessels_status, aiReportFields.analysis_precision,
+                    existingReport[0].id
+                ]
+            );
         } else {
-            await pool.query('INSERT INTO ai_reports SET ?', [aiReportFields]);
+            await pool.query(
+                `INSERT INTO ai_reports (
+                    user_id, health_data_id, exam_year, summary, medical_recommendation, 
+                    risk_overview, organ_heart_status, organ_liver_status, organ_pancreas_status, 
+                    organ_abdomen_status, organ_vessels_status, analysis_precision
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    aiReportFields.user_id, aiReportFields.health_data_id, aiReportFields.exam_year, 
+                    aiReportFields.summary, aiReportFields.medical_recommendation, aiReportFields.risk_overview,
+                    aiReportFields.organ_heart_status, aiReportFields.organ_liver_status, aiReportFields.organ_pancreas_status,
+                    aiReportFields.organ_abdomen_status, aiReportFields.organ_vessels_status, aiReportFields.analysis_precision
+                ]
+            );
         }
 
         // Cleanup: remove file after processing (optional, depends on policy)

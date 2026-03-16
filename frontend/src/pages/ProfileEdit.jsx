@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 import { Heart, ChevronLeft, User, Mail, Lock, Phone, Calendar, Save, Trash2, CheckCircle2 } from 'lucide-react';
 
 export default function ProfileEdit() {
@@ -22,11 +22,8 @@ export default function ProfileEdit() {
 
   const fetchUser = async () => {
     try {
-      const token = localStorage.getItem('carelink_token');
-      const res = await axios.get('http://localhost:5000/api/users/me', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = res.data;
+      const res = await api.get('/users/me');
+      const data = res.data.data; // Note: adjusted to res.data.data if that's the response structure
       setUser(data);
       setFormData({
         name: data.name,
