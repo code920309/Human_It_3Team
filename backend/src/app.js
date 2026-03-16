@@ -85,7 +85,8 @@ app.get('/.netlify/functions/api/debug-db', async (req, res) => {
     } catch (err) {
         res.status(500).json({ 
             success: false, 
-            error: err.message, 
+            error: err.message,
+            stack: err.stack,
             has_db_url: !!process.env.DATABASE_URL,
             isPostgres: dbConfig.isPostgres
         });
