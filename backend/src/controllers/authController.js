@@ -95,11 +95,14 @@ exports.signup = async (req, res) => {
 
 exports.login = async (req, res) => {
     const { password } = req.body;
-    const email = req.body.email ? req.body.email.trim() : '';
+    const email = req.body.email ? req.body.email.trim().toLowerCase() : '';
 
     try {
-        // Use EXACT same logic as debug route
-        const [users] = await pool.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [email]);
+        // Use TRIM and LOWER for maximum robustness
+        const [users] = await pool.query(
+            'SELECT * FROM users WHERE LOWER(TRIM(email)) = $1', 
+            [email]
+        );
         
         if (users.length === 0) {
             return res.status(400).json({ success: false, message: '가입되지 않은 이메일입니다.' });

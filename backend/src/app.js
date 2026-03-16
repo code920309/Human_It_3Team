@@ -37,12 +37,13 @@ const dbConfig = require('./config/db');
 app.get('/.netlify/functions/api/debug-db', async (req, res) => {
     try {
         const [rows] = await dbConfig.query('SELECT current_database(), current_user');
-        const [userList] = await dbConfig.query('SELECT email, email_verified, name FROM users LIMIT 10');
+        const [userList] = await dbConfig.query('SELECT email, LENGTH(email) as len, email_verified, name FROM users LIMIT 5');
         res.json({ 
             success: true, 
             isPostgres: dbConfig.isPostgres,
             info: rows[0],
             users: userList,
+            hint: "Check 'len' - it should be 13 for 'test@test.com'",
             has_db_url: !!process.env.DATABASE_URL
         });
     } catch (err) {
