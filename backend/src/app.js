@@ -32,6 +32,27 @@ app.use('/.netlify/functions/api', apiRouter);
 app.get('/', (req, res) => res.send('CareLink Backend API is running...'));
 app.get('/.netlify/functions/api', (req, res) => res.send('CareLink Backend API (Netlify) is running...'));
 
+// Diagnostic Route
+const dbConfig = require('./config/db');
+app.get('/.netlify/functions/api/debug-db', async (req, res) => {
+    try {
+        const [rows] = await dbConfig.query('SELECT current_database(), current_user');
+        res.json({ 
+            success: true, 
+            isPostgres: dbConfig.isPostgres,
+            info: rows[0],
+            has_db_url: !!process.env.DATABASE_URL
+        });
+    } catch (err) {
+        res.status(500).json({ 
+            success: false, 
+            error: err.message, 
+            has_db_url: !!process.env.DATABASE_URL,
+            isPostgres: dbConfig.isPostgres
+        });
+    }
+});
+
 // Export app for serverless functions
 module.exports = app;
 
