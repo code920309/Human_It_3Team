@@ -1,21 +1,51 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Pagination, Navigation } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
 import 'swiper/css/navigation';
-import { Heart, ShieldCheck, Activity, MessageSquare, ArrowRight, Star } from 'lucide-react';
+import { Heart, Star } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function HomePage() {
-  const { isAuthenticated, logout } = useAuth();
+  const { user, logout } = useAuth();
+  const isAuthenticated = !!user;
+
+  const [email, setEmail] = useState('');
+  const [message, setMessage] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault(); // 페이지 새로고침 방지
+    if (!email || !message) {
+      alert('이메일과 메시지를 모두 입력해주세요.');
+      return;
+    }
+    try {
+      // 주의: 백엔드 서버 주소와 포트(예: 5000)는 팀 설정에 따라 다를 수 있습니다.
+      const response = await fetch('http://localhost:5000/api/contacts', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, message })
+      });
+      if (response.ok) {
+        alert('소중한 의견이 전달되었습니다!');
+        setEmail(''); // 입력창 비우기
+        setMessage('');
+      } else {
+        alert('전송에 실패했습니다. 다시 시도해주세요.');
+      }
+    } catch (error) {
+      console.error('에러 발생:', error);
+      alert('서버와 연결할 수 없습니다.');
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen">
       {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-orange-100 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <div className="flex-shrink-0 flex items-center">
               <Link to="/" className="text-2xl font-extrabold text-teal-600 flex items-center gap-2">
@@ -27,7 +57,7 @@ export default function HomePage() {
               {isAuthenticated ? (
                 <>
                   <Link to="/mypage" className="text-slate-600 hover:text-teal-600 transition-colors font-semibold">마이페이지</Link>
-                  <button 
+                  <button
                     onClick={logout}
                     className="bg-teal-600 text-white px-6 py-2.5 rounded-lg font-bold hover:bg-teal-700 transition-all shadow-md"
                   >
@@ -48,7 +78,7 @@ export default function HomePage() {
       </nav>
 
       {/* Main Slider */}
-      <section className="relative h-[650px]">
+      <section className="relative h-[600px]">
         <Swiper
           spaceBetween={0}
           centeredSlides={true}
@@ -56,7 +86,7 @@ export default function HomePage() {
           pagination={{ clickable: true }}
           navigation={true}
           modules={[Autoplay, Pagination, Navigation]}
-          className="h-full"
+          className="h-[600px]"
         >
           {/* Slide 1 - 서비스 소개 */}
           <SwiperSlide>
@@ -65,7 +95,6 @@ export default function HomePage() {
               <div className="max-w-5xl mx-auto text-center px-4 relative z-10">
                 <h1 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight">
                   CareLink
-                  {/*AI 기반 개인 건강 관리 플랫폼*/}
                 </h1>
                 <p className="text-lg md:text-xl text-slate-100 max-w-5xl mx-auto">
                   <br /> CareLink는 건강검진 데이터를 분석하여
@@ -116,14 +145,14 @@ export default function HomePage() {
                   당신에게 맞는 건강 관리 방법
                 </h1>
                 <p className="text-lg md:text-xl text-slate-100 max-w-5xl mx-auto">
-                  <br /> CareLink는 개인의 건강 데이터를 기반으로  
+                  <br /> CareLink는 개인의 건강 데이터를 기반으로
                   맞춤형 식단, 운동, 생활습관 개선 가이드를 제공합니다. <br /><br />
                   지속적인 건강 관리와 변화를 함께 만들어갑니다.
                 </p>
               </div>
             </div>
           </SwiperSlide>
-          {/* Slide 5 - 서비스 시작 CTA */}
+          {/* Slide 5 - 서비스 시작 */}
           <SwiperSlide>
             <div className="relative h-full flex items-center justify-center text-white bg-[url('https://69b57d62d7351016cf21b33e.imgix.net/pexels-karola-g-5206922.jpg?w=6720&h=4480')] bg-cover bg-center">
               <div className="absolute inset-0 bg-slate-900/60" />
@@ -132,7 +161,7 @@ export default function HomePage() {
                   지금 나의 건강 상태를 확인해보세요
                 </h1>
                 <p className="text-lg md:text-xl text-slate-100 mb-10 max-w-5xl mx-auto">
-                  <br /> 건강검진 결과를 업로드하면  
+                  <br /> 건강검진 결과를 업로드하면
                   AI가 건강 상태를 분석하고 맞춤형 건강 관리 가이드를 제공합니다. <br />
                   지금 CareLink와 함께 건강 관리를 시작해보세요.
                 </p>
@@ -152,7 +181,7 @@ export default function HomePage() {
 
       {/* Reviews */}
       <section className="py-24 bg-[#f9f7f0]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">사용자 후기</h2>
             <div className="w-20 h-1 bg-teal-500 mx-auto rounded-full"></div>
@@ -178,7 +207,7 @@ export default function HomePage() {
 
       {/* Video */}
       <section className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8">
           {/* Section Title */}
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">
@@ -188,16 +217,15 @@ export default function HomePage() {
           </div>
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Video */}
-            <div className="aspect-video rounded-xl overflow-hidden shadow-xl">
+            <div className="w-full max-w-5xl mx-auto">
               <iframe
-                width="560"
-                height="315"
+                className="w-full aspect-video"
                 src="https://www.youtube.com/embed/yHY5bhh9JLk?si=at7MAVHObW7zx-uZ"
                 title="YouTube video player"
-                frameborder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                referrerpolicy="strict-origin-when-cross-origin" allowfullscreen>
-              </iframe>
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+              ></iframe>
             </div>
             <div>
               <p className="text-lg text-slate-600 mb-6 leading-relaxed">
@@ -235,32 +263,44 @@ export default function HomePage() {
                 <p>경기 수원시 팔달구 중부대로 100 4층</p>
                 <p>전화: 02-1234-5678 | 이메일: support@carelink.health</p>
               </div>
-              </div>
+            </div>
             <div>
               <h3 className="text-2xl font-extrabold mb-8 text-slate-900">문의하기</h3>
-              <form className="space-y-4">
-                <input className="w-full bg-slate-50 border border-slate-200 rounded-lg py-4 px-4 focus:ring-2 focus:ring-teal-500 outline-none" placeholder="제목" type="text" />
-                <textarea className="w-full bg-slate-50 border border-slate-200 rounded-lg py-4 px-4 focus:ring-2 focus:ring-teal-500 outline-none" placeholder="메시지" rows={4}></textarea>
-                <button 
-                  type="button"
-                  className="w-full bg-red-500 hover:bg-red-600 text-white font-extrabold py-4 rounded-lg shadow-lg transition-all transform hover:-translate-y-1"
-                >
-                  메시지 보내기
-                </button>
-              </form>
+              <form className="space-y-4" onSubmit={handleSubmit}>
+              <input 
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg py-4 px-4 focus:ring-2 focus:ring-teal-500 outline-none" 
+                placeholder="이메일" 
+                type="email" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)} // 입력값 연결
+              />
+              <textarea 
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg py-4 px-4 focus:ring-2 focus:ring-teal-500 outline-none" 
+                placeholder="메시지" 
+                rows={4}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)} // 입력값 연결
+              ></textarea>
+              <button
+                type="submit" // button -> submit으로 변경
+                className="w-full bg-red-500 hover:bg-red-600 text-white font-extrabold py-4 rounded-lg shadow-lg transition-all transform hover:-translate-y-1"
+              >
+                메시지 보내기
+              </button>
+            </form>
             </div>
           </div>
           <div className="pt-8 border-t border-slate-100 flex flex-col items-center gap-3 text-slate-400 text-sm font-medium">
-          <div className="flex gap-6">
-            <Link to="/policy/terms" className="hover:text-teal-600 transition-colors">
-              이용약관
-            </Link>
-            <Link to="/policy/privacy" className="hover:text-teal-600 transition-colors">
-              개인정보처리방침
-            </Link>
+            <div className="flex gap-6">
+              <Link to="/policy/terms" className="hover:text-teal-600 transition-colors">
+                이용약관
+              </Link>
+              <Link to="/policy/privacy" className="hover:text-teal-600 transition-colors">
+                개인정보처리방침
+              </Link>
+            </div>
+            <p>© Copyright 2026 CareLink Healthcare - All Rights Reserved</p>
           </div>
-          <p>© Copyright 2026 CareLink Healthcare - All Rights Reserved</p>
-        </div>
         </div>
       </footer>
     </div>
