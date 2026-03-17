@@ -17,7 +17,7 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/login', { email, password });
+      const res = await axios.post('/api/auth/login', { email, password });
       if (res.data.success) {
         login(res.data.token, res.data.user);
         navigate('/mypage');
@@ -87,7 +87,7 @@ export default function LoginPage() {
           <div className="mt-10 text-center">
             <p className="text-slate-500">
               계정이 없으신가요?{' '}
-              <Link to="/signup" className="text-teal-600 font-bold hover:underline font-bold">
+              <Link to="/signup" className="text-teal-600 font-bold hover:underline">
                 회원가입
               </Link>
             </p>

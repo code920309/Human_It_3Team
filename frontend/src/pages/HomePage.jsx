@@ -64,12 +64,12 @@ export default function HomePage() {
               <div className="absolute inset-0 bg-slate-900/60" />
               <div className="max-w-5xl mx-auto text-center px-4 relative z-10">
                 <h1 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight">
-                  CareLink
-                  {/*AI 기반 개인 건강 관리 플랫폼*/}
+                  CareLink<br />
+                  AI 기반 개인 건강 관리 플랫폼
                 </h1>
                 <p className="text-lg md:text-xl text-slate-100 max-w-5xl mx-auto">
-                  <br /> CareLink는 건강검진 데이터를 분석하여
-                  사용자가 자신의 건강 상태를 쉽게 이해하고 <br />
+                  CareLink는 건강검진 데이터를 분석하여
+                  사용자가 자신의 건강 상태를 쉽게 이해하고<br />
                   지속적으로 관리할 수 있도록 돕는 스마트 헬스케어 서비스입니다.
                 </p>
               </div>
@@ -84,8 +84,8 @@ export default function HomePage() {
                   건강검진 결과, 제대로 이해하고 계신가요?
                 </h1>
                 <p className="text-lg md:text-xl text-slate-100 max-w-5xl mx-auto">
-                  <br /> 건강검진 결과표는 대부분 전문 의학 용어와 수치 중심으로 작성되어 <br />
-                  일반 사용자가 자신의 건강 상태를 정확히 이해하기 어렵습니다. <br /><br />
+                  건강검진 결과서는 대부분 전문 의학 용어와 수치 중심으로 작성되어<br />
+                  일반 사용자가 자신의 건강 상태를 정확히 이해하기 어렵습니다.<br /><br />
                   그 결과 관리가 필요한 신호를 놓치기도 합니다.
                 </p>
               </div>
@@ -100,8 +100,8 @@ export default function HomePage() {
                   AI가 건강 데이터를 분석합니다
                 </h1>
                 <p className="text-lg md:text-xl text-slate-100 max-w-5xl mx-auto">
-                  <br /> CareLink는 건강검진 데이터를 AI로 분석하여
-                  대사증후군 주요 지표와 건강 위험 요소를 파악하고 <br />
+                  CareLink는 건강검진 데이터를 AI로 분석하여
+                  대사증후군 주요 지표와 건강 위험 요소를 파악하고<br />
                   사용자가 이해하기 쉬운 형태로 건강 상태를 설명합니다.
                 </p>
               </div>
@@ -116,8 +116,8 @@ export default function HomePage() {
                   당신에게 맞는 건강 관리 방법
                 </h1>
                 <p className="text-lg md:text-xl text-slate-100 max-w-5xl mx-auto">
-                  <br /> CareLink는 개인의 건강 데이터를 기반으로  
-                  맞춤형 식단, 운동, 생활습관 개선 가이드를 제공합니다. <br /><br />
+                  CareLink는 개인의 건강 데이터를 기반으로 
+                  맞춤형 식단, 운동, 생활습관 개선 가이드를 제공합니다.<br /><br />
                   지속적인 건강 관리와 변화를 함께 만들어갑니다.
                 </p>
               </div>
@@ -132,8 +132,8 @@ export default function HomePage() {
                   지금 나의 건강 상태를 확인해보세요
                 </h1>
                 <p className="text-lg md:text-xl text-slate-100 mb-10 max-w-5xl mx-auto">
-                  <br /> 건강검진 결과를 업로드하면  
-                  AI가 건강 상태를 분석하고 맞춤형 건강 관리 가이드를 제공합니다. <br />
+                  건강검진 결과를 업로드하면 
+                  AI가 건강 상태를 분석하고 맞춤형 건강 관리 가이드를 제공합니다.<br />
                   지금 CareLink와 함께 건강 관리를 시작해보세요.
                 </p>
                 <div className="flex justify-center gap-4 flex-wrap">
@@ -160,9 +160,9 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
               { name: "김OO", text: "드디어 건강검진 결과를 이해했어요! AI의 설명이 정말 명확하고 도움이 되었습니다." },
-              { name: "이XX", text: "인터페이스가 현대적이고 사용하기 쉽네요. 모든 분들께 강력히 추천합니다." },
+              { name: "이XX", text: "인터페이스가 프리미엄이고 사용하기 쉽네요! 모든 분들께 강력히 추천합니다." },
               { name: "박YY", text: "더 이상 의학 용어를 검색할 필요가 없어요. CareLink가 즉시 모든 것을 해결해 줍니다." },
-              { name: "최ZZ", text: "내 건강 관리에 더 자신감이 생겼어요. 정말 혁신적인 도구입니다." }
+              { name: "최ZZ", text: "제 건강 관리에 대한 자신감이 생겼어요. 정말 혁신적인 도구입니다." }
             ].map((review, i) => (
               <div key={i} className="bg-white p-8 rounded-xl shadow-sm border border-orange-50 hover:shadow-md transition-shadow">
                 <div className="flex text-amber-400 mb-4">
@@ -179,7 +179,6 @@ export default function HomePage() {
       {/* Video */}
       <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Section Title */}
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">
               오늘의 건강 인사이트
@@ -187,34 +186,33 @@ export default function HomePage() {
             <div className="w-20 h-1 bg-teal-500 mx-auto rounded-full"></div>
           </div>
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Video */}
             <div className="aspect-video rounded-xl overflow-hidden shadow-xl">
               <iframe
-                width="560"
-                height="315"
+                width="100%"
+                height="100%"
                 src="https://www.youtube.com/embed/yHY5bhh9JLk?si=at7MAVHObW7zx-uZ"
                 title="YouTube video player"
-                frameborder="0"
+                frameBorder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                referrerpolicy="strict-origin-when-cross-origin" allowfullscreen>
+                referrerPolicy="strict-origin-when-cross-origin" allowFullScreen>
               </iframe>
             </div>
             <div>
               <p className="text-lg text-slate-600 mb-6 leading-relaxed">
                 건강은 작은 생활 습관에서 시작됩니다.
                 영상에서 소개하는 건강 관리 방법을 확인하고,
-                CareLink에서 제공하는 개인 맞춤 건강 관리 팁도 함께 확인해보세요.
+                CareLink에서 제공하는 개인 맞춤형 건강 관리 방식도 함께 확인해보세요.
               </p>
               <ul className="space-y-4 text-slate-700 font-medium">
-                <li>✓ 건강검진 데이터 기반 건강 분석</li>
-                <li>✓ 개인 맞춤형 영양 가이드</li>
-                <li>✓ 생활습관 개선 추천</li>
+                <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-teal-500 rounded-full" /> 내 건강검진 데이터 기반 건강 분석</li>
+                <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-teal-500 rounded-full" /> 개인 맞춤형 영양 가이드</li>
+                <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-teal-500 rounded-full" /> 생활습관 개선 추천</li>
               </ul>
               <Link
                 to={isAuthenticated ? "/upload" : "/login"}
-                className="inline-flex items-center mt-8 bg-teal-500 hover:bg-teal-600 text-white px-6 py-3 rounded-lg font-bold transition-all hover:scale-105 shadow-md"
+                className="inline-flex items-center mt-8 bg-teal-500 hover:bg-teal-600 text-white px-6 py-3 rounded-lg font-bold transition-all hover:scale-105 shadow-md gap-2"
               >
-                맞춤형 분석 해보기 &gt;
+                맞춤형 분석 해보기 <ArrowRight className="w-5 h-5" />
               </Link>
             </div>
           </div>
@@ -232,10 +230,10 @@ export default function HomePage() {
               </div>
               <div className="space-y-4 text-slate-500 text-sm font-medium">
                 <p>(주)케어링크 헬스케어 서비스</p>
-                <p>경기 수원시 팔달구 중부대로 100 4층</p>
+                <p>경기도 수원시 영통구 중부대로 448 4층</p>
                 <p>전화: 02-1234-5678 | 이메일: support@carelink.health</p>
               </div>
-              </div>
+            </div>
             <div>
               <h3 className="text-2xl font-extrabold mb-8 text-slate-900">문의하기</h3>
               <form className="space-y-4">
@@ -251,16 +249,12 @@ export default function HomePage() {
             </div>
           </div>
           <div className="pt-8 border-t border-slate-100 flex flex-col items-center gap-3 text-slate-400 text-sm font-medium">
-          <div className="flex gap-6">
-            <Link to="/policy/terms" className="hover:text-teal-600 transition-colors">
-              이용약관
-            </Link>
-            <Link to="/policy/privacy" className="hover:text-teal-600 transition-colors">
-              개인정보처리방침
-            </Link>
+            <div className="flex gap-6">
+              <Link to="/policy" className="hover:text-teal-600 transition-colors">이용약관</Link>
+              <Link to="/policy" className="hover:text-teal-600 transition-colors">개인정보처리방침</Link>
+            </div>
+            <p>© Copyright 2026 CareLink Healthcare - All Rights Reserved</p>
           </div>
-          <p>© Copyright 2026 CareLink Healthcare - All Rights Reserved</p>
-        </div>
         </div>
       </footer>
     </div>

@@ -15,7 +15,7 @@ export default function ActionPlanPage() {
     const fetchPlans = async () => {
         try {
             const token = localStorage.getItem('carelink_token');
-            const res = await axios.get('http://localhost:5000/api/action-plans/current', {
+            const res = await axios.get('/api/action-plans/current', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.data.success) {
@@ -36,7 +36,7 @@ export default function ActionPlanPage() {
             // Optimistic Update
             setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, is_completed: newStatus } : p));
 
-            await axios.patch(`http://localhost:5000/api/action-plans/${plan.id}/toggle`, 
+            await axios.patch(`/api/action-plans/${plan.id}/toggle`, 
                 { is_completed: newStatus },
                 { headers: { Authorization: `Bearer ${token}` } }
             );

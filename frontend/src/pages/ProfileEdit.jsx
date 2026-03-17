@@ -23,10 +23,10 @@ export default function ProfileEdit() {
   const fetchUser = async () => {
     try {
       const token = localStorage.getItem('carelink_token');
-      const res = await axios.get('http://localhost:5000/api/users/me', {
+      const res = await axios.get('/api/auth/me', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      const data = res.data;
+      const data = res.data.data;
       setUser(data);
       setFormData({
         name: data.name,
@@ -132,7 +132,7 @@ export default function ProfileEdit() {
               </div>
               <button type="submit" disabled={loading} className="w-full bg-teal-600 text-white font-black py-5 rounded-2xl shadow-lg shadow-teal-600/20 flex items-center justify-center gap-2 hover:bg-teal-700 transition-all active:scale-95 disabled:opacity-50">
                 {loading ? <CheckCircle2 className="w-6 h-6 animate-pulse" /> : <Save className="w-6 h-6" />}
-                변경 사항 저장하기
+                변경사항 저장하기
               </button>
               <div className="pt-8 border-t border-slate-100 flex justify-center">
                 <button type="button" className="text-red-300 font-bold text-sm flex items-center gap-2 hover:text-red-500 transition-all group">

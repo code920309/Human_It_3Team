@@ -26,7 +26,7 @@ export default function ChatbotPage() {
   const fetchHistory = async () => {
     try {
       const token = localStorage.getItem('carelink_token');
-      const res = await axios.get('http://localhost:5000/api/chatbot/history', {
+      const res = await axios.get('/api/chatbot/history', {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success && res.data.data.length > 0) {
@@ -50,7 +50,7 @@ export default function ChatbotPage() {
 
     try {
       const token = localStorage.getItem('carelink_token');
-      const res = await axios.post('http://localhost:5000/api/chatbot/message', 
+      const res = await axios.post('/api/chatbot/message', 
         { message: userMsgText },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -122,7 +122,7 @@ export default function ChatbotPage() {
       <div className="bg-white border-t border-orange-100 p-4 pb-8 shrink-0">
         <div className="max-w-4xl mx-auto">
           <div className="mb-4 flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-            {['내 콜레스테롤 수치가 왜 위험한가요?', '공복 혈당 낮추는 법 알려줘', '간 수치 개선 식단 추천해줘'].map((q, i) => (
+            {['제 콜레스테롤 수치가 많이 위험한가요?', '공복 혈당 낮추는 법 알려줘', '간 수치 개선 식단 추천해줘'].map((q, i) => (
               <button 
                 key={i}
                 onClick={() => setInput(q)}

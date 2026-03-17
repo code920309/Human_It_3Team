@@ -21,7 +21,7 @@ export default function MyPage() {
         setLoading(true);
         try {
             const token = localStorage.getItem('carelink_token');
-            const yearsRes = await axios.get('http://localhost:5000/api/reports/years', {
+            const yearsRes = await axios.get('/api/reports/years', {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
@@ -44,7 +44,7 @@ export default function MyPage() {
     const fetchReport = async (year) => {
         try {
             const token = localStorage.getItem('carelink_token');
-            const res = await axios.get(`http://localhost:5000/api/reports/health?year=${year}`, {
+            const res = await axios.get(`/api/reports/health?year=${year}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.data.success) {
@@ -102,7 +102,7 @@ export default function MyPage() {
                 <header className="flex justify-between items-center mb-12">
                     <div>
                         <h1 className="text-3xl font-extrabold text-slate-900">대시보드</h1>
-                        <p className="text-slate-500 font-medium">{user?.name}님, 분석된 최근 건강 상태입니다.</p>
+                        <p className="text-slate-500 font-medium">{user?.name}님의 분석된 최근 건강 상태입니다.</p>
                     </div>
                     <div className="flex items-center gap-4">
                         {availableYears.length > 0 && (
@@ -128,7 +128,7 @@ export default function MyPage() {
                     <div className="bg-white rounded-3xl p-12 text-center border border-orange-100">
                         <FileText className="w-16 h-16 text-slate-200 mx-auto mb-4" />
                         <h2 className="text-xl font-bold text-slate-600">아직 분석된 데이터가 없습니다.</h2>
-                        <p className="text-slate-400 mt-2">건강검진 결과지를 업로드하여 AI 분석을 시작하시겠습니까?</p>
+                        <p className="text-slate-400 mt-2">건강검진 결과지를 업로드하고 AI 분석을 시작하시겠습니까?</p>
                         <Link to="/upload" className="inline-block mt-8 bg-teal-600 text-white px-8 py-3 rounded-2xl font-bold hover:scale-105 transition-transform">
                             업로드하러 가기
                         </Link>
@@ -170,7 +170,7 @@ export default function MyPage() {
                                             {reportData.aiReport.summary.substring(0, 100)}...
                                         </p>
                                     </div>
-                                    <Link to={`/report?year=${selectedYear}`} className="flex items-center justify-between w-full p-4 bg-slate-50 rounded-2xl text-slate-600 font-bold hover:bg-slate-100 transition-all text-sm font-bold">
+                                    <Link to={`/report?year=${selectedYear}`} className="flex items-center justify-between w-full p-4 bg-slate-50 rounded-2xl text-slate-600 font-bold hover:bg-slate-100 transition-all text-sm">
                                         상세 건강 리포트 보기 <ChevronRight className="w-5 h-5" />
                                     </Link>
                                 </div>
