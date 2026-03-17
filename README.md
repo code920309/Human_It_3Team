@@ -58,7 +58,7 @@ GEMINI_API_KEY=your_key
 ```bash
 cd backend
 npm install
-npm run dev
+npm run dev (npm ruu dev 안될경우 -> node src/app.js)
 ```
 
 ### 3. 프론트엔드 실행
