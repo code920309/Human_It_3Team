@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 import { Heart, Mail, Lock, User, Calendar, ArrowRight, ShieldCheck, AlertCircle, ChevronRight } from 'lucide-react';
 
 export default function SignupPage() {
@@ -25,7 +25,7 @@ export default function SignupPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await axios.post('/api/auth/signup/request-otp', { email });
+      const res = await api.post('/auth/signup/request-otp', { email });
       if (res.data.success) {
         setIsOtpSent(true);
       }
@@ -40,7 +40,7 @@ export default function SignupPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await axios.post('/api/auth/signup/verify-otp', { email, otp });
+      const res = await api.post('/auth/signup/verify-otp', { email, otp });
       if (res.data.success) {
         setIsEmailVerified(true);
         setStep(2);
@@ -57,7 +57,7 @@ export default function SignupPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await axios.post('/api/auth/signup', {
+      const res = await api.post('/auth/signup', {
         email,
         ...formData
       });
@@ -120,7 +120,7 @@ export default function SignupPage() {
                     disabled={loading || isEmailVerified || !email}
                     className="bg-teal-600 hover:bg-teal-700 text-white px-4 rounded-2xl font-bold transition-all disabled:opacity-50 whitespace-nowrap text-sm"
                   >
-                    {isOtpSent ? '재발송' : '인증요청'}
+                    {isOtpSent ? '재발령' : '인증요청'}
                   </button>
                 </div>
               </div>

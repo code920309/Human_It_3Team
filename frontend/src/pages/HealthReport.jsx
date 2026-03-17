@@ -1,15 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import axios from 'axios';
-import { Heart, ChevronLeft, Download, AlertCircle, CheckCircle2, Info, Loader2, Activity } from 'lucide-react';
-import HumanBodySVG from '../components/HumanBodySVG';
+import api from '../api/axios';
+import { Heart, ChevronLeft, Download, AlertCircle, CheckCircle2, Info, Loader2 } from 'lucide-react';
 
 export default function HealthReport() {
   const [searchParams] = useSearchParams();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeOrgan, setActiveOrgan] = useState(null);
-  const [selectedOrgan, setSelectedOrgan] = useState(null);
   const year = searchParams.get('year');
 
   useEffect(() => {
@@ -19,10 +16,7 @@ export default function HealthReport() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('carelink_token');
-      const res = await axios.get(`/api/reports/health${year ? `?year=${year}` : ''}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const res = await api.get(`/reports/health${year ? `?year=${year}` : ''}`);
       if (res.data.success) {
         setData(res.data.data);
       }
@@ -57,6 +51,7 @@ export default function HealthReport() {
 
   return (
     <div className="min-h-screen bg-[#f9f7f0] pb-20">
+      {/* Header */}
       <header className="bg-white border-b border-orange-100 sticky top-0 z-30">
         <div className="max-w-5xl mx-auto px-4 h-20 flex items-center justify-between">
           <Link to="/mypage" className="flex items-center gap-2 text-slate-600 font-bold hover:text-teal-600 transition-all">
@@ -64,7 +59,7 @@ export default function HealthReport() {
           </Link>
           <div className="flex items-center gap-2">
             <Heart className="w-6 h-6 text-teal-600 fill-current" />
-            <h1 className="text-xl font-black text-slate-900">{data.year}년 정보 건강 리포트</h1>
+            <h1 className="text-xl font-black text-slate-900">{data.year}년 정밀 건강 리포트</h1>
           </div>
           <button className="p-2 text-slate-400 hover:text-teal-600 transition-all">
             <Download className="w-6 h-6" />
@@ -73,93 +68,70 @@ export default function HealthReport() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 mt-8 space-y-8">
-        <section className="bg-white p-8 rounded-[32px] shadow-sm border border-orange-50 grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Summary Card */}
+        <section className="bg-white p-8 rounded-3xl shadow-sm border border-orange-50 grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="text-center md:border-r border-slate-100 flex flex-col justify-center">
-            <p className="text-slate-400 font-bold text-xs mb-4 uppercase tracking-widest">종합 건강 점수</p>
-            <div className="relative inline-block mx-auto mb-4">
-               <svg className="w-32 h-32 transform -rotate-90">
-                  <circle cx="64" cy="64" r="58" fill="transparent" stroke="#f1f5f9" strokeWidth="12" />
-                  <circle 
-                    cx="64" cy="64" r="58" fill="transparent" stroke="#14b8a6" strokeWidth="12" 
-                    strokeDasharray={364} 
-                    strokeDashoffset={364 - (364 * healthRecord.health_score) / 100}
-                    strokeLinecap="round"
-                    className="transition-all duration-1000 ease-out"
-                  />
-               </svg>
-               <div className="absolute inset-0 flex items-center justify-center font-black text-4xl text-slate-800">
-                 {healthRecord.health_score}
-               </div>
-            </div>
-            <p className="text-teal-600 font-black text-sm flex items-center justify-center gap-1">
-              {healthRecord.health_score >= 80 ? '매우 양호' : healthRecord.health_score >= 60 ? '양호' : '관리 필요'}
+            <p className="text-slate-400 font-bold text-sm mb-4">종합 건강 점수</p>
+            <div className="text-7xl font-black text-teal-600 mb-2">{healthRecord.health_score}</div>
+            <p className="text-teal-500 font-bold flex items-center justify-center gap-1">
+              <CheckCircle2 className="w-5 h-5" /> {healthRecord.health_score >= 80 ? '매우 양호' : healthRecord.health_score >= 60 ? '양호' : '주의 요망'}
             </p>
           </div>
-
           <div className="md:col-span-2 space-y-4">
-            <div className="flex items-center gap-2 text-slate-900 font-black">
-              <div className="w-8 h-8 bg-teal-50 rounded-lg flex items-center justify-center">
-                <Info className="w-5 h-5 text-teal-600" />
-              </div>
-              AI 총평 분석
+            <div className="flex items-center gap-2 text-slate-900 font-bold">
+              <Info className="w-5 h-5 text-teal-500" /> AI 분석 요약
             </div>
-            <p className="text-slate-600 leading-relaxed bg-slate-50/50 p-6 rounded-2xl border border-slate-100 font-medium italic">
-              "{aiReport?.summary || "데이터를 기반으로 AI가 분석 중입니다."}"
+            <p className="text-slate-600 leading-relaxed bg-slate-50 p-6 rounded-2xl border border-slate-100">
+              {aiReport?.summary || "데이터를 기반으로 AI가 분석 중입니다. 잠시만 기다려주세요."}
             </p>
-            <div className="p-5 bg-teal-900 text-white rounded-2xl shadow-lg flex gap-4">
-              <AlertCircle className="w-6 h-6 text-teal-400 shrink-0" />
+            <div className="p-5 bg-amber-50 rounded-2xl border border-amber-100 flex gap-4">
+              <AlertCircle className="w-6 h-6 text-amber-500 shrink-0" />
               <div>
-                <p className="text-teal-400 font-bold text-xs mb-1 uppercase tracking-widest">AI 맞춤 권고</p>
-                <p className="text-white text-sm font-medium leading-relaxed">{aiReport?.medical_recommendation || "정기적인 운동과 균형 잡힌 식단을 유지하세요."}</p>
+                <p className="text-amber-800 font-bold text-sm mb-1">맞춤형 의료 권고</p>
+                <p className="text-amber-700 text-xs leading-relaxed">{aiReport?.medical_recommendation || "정기적인 운동과 균형 잡힌 식단을 유지하세요."}</p>
               </div>
             </div>
           </div>
         </section>
 
+        {/* Organ Status & Body Visualization */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <HumanBodySVG 
-            organStatus={aiReport} 
-            activeOrgan={activeOrgan} 
-            onOrganHover={setActiveOrgan}
-            selectedOrgan={selectedOrgan}
-            onOrganSelect={(id) => setSelectedOrgan(prev => prev === id ? null : id)}
-          />
-
-          <div className="space-y-6">
-            <h2 className="text-xl font-black text-slate-900 flex items-center gap-3">
-              <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center">
-                 <Activity className="w-6 h-6 text-teal-600" />
+          {/* Body SVG Placeholder */}
+          <div className="bg-white p-8 rounded-3xl shadow-sm border border-orange-50 flex items-center justify-center min-h-[500px] relative overflow-hidden">
+            <div className="relative w-64 h-full opacity-10">
+              <svg viewBox="0 0 200 500" className="w-full h-full fill-slate-300">
+                <path d="M100 20c-20 0-35 15-35 35s15 35 35 35 35-15 35-35-15-35-35-35zM65 100c-20 0-40 20-40 40v100c0 10 10 20 20 20h20v150c0 20 15 35 35 35s35-15 35-35V260h20c10 0 20-10 20-20V140c0-20-20-40-40-40H65z" />
+              </svg>
+            </div>
+            <div className="absolute flex flex-col items-center">
+              <div className="w-32 h-32 bg-teal-50 rounded-full flex items-center justify-center mb-4 border border-teal-100 animate-pulse">
+                <Heart className="w-16 h-16 text-teal-500 fill-current opacity-20" />
               </div>
-              주요 위험 요인 정보 분석
+              <p className="text-slate-400 font-bold">인체 시각화 분석</p>
+              <p className="text-xs text-slate-300 mt-1">장기별 위험도 실시간 매핑 중</p>
+            </div>
+          </div>
+
+          {/* Risk Panel */}
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <Activity className="w-5 h-5 text-teal-500" /> 주요 위험 요인 분석
             </h2>
             {[
-              { id: 'abdomen', label: "복부 비만 (허리둘레)", value: healthRecord.waist, unit: "cm", status: healthRecord.waist > 90 ? "risk" : "normal" },
-              { id: 'pancreas', label: "공복 혈당 (GLU)", value: healthRecord.fasting_glucose || healthRecord.glucose, unit: "mg/dL", status: (healthRecord.fasting_glucose || healthRecord.glucose) > 100 ? "borderline" : "normal" },
-              { id: 'heart', label: "중성 지방 (TG)", value: healthRecord.tg, unit: "mg/dL", status: healthRecord.tg > 150 ? "risk" : "normal" },
-              { id: 'vessels', label: "수축기 혈압 (SYS)", value: healthRecord.blood_pressure_s, unit: "mmHg", status: healthRecord.blood_pressure_s > 140 ? "risk" : healthRecord.blood_pressure_s > 120 ? "borderline" : "normal" },
-              { id: 'liver', label: "간 기능 지표 (ALT)", value: healthRecord.alt, unit: "U/L", status: healthRecord.alt > 40 ? "risk" : "normal" }
+              { label: "복부 비만 (허리둘레)", value: healthRecord.waist, unit: "cm", status: healthRecord.waist > 90 ? "risk" : "normal" },
+              { label: "공복 혈당", value: healthRecord.fasting_glucose || healthRecord.glucose, unit: "mg/dL", status: (healthRecord.fasting_glucose || healthRecord.glucose) > 100 ? "borderline" : "normal" },
+              { label: "중성 지방 (TG)", value: healthRecord.tg, unit: "mg/dL", status: healthRecord.tg > 150 ? "risk" : "normal" },
+              { label: "간 기능 지표 (ALT)", value: healthRecord.alt, unit: "U/L", status: healthRecord.alt > 40 ? "risk" : "normal" }
             ].map((item, i) => (
-              <div 
-                key={i} 
-                onMouseEnter={() => setActiveOrgan(item.id)}
-                onMouseLeave={() => setActiveOrgan(null)}
-                onClick={() => setSelectedOrgan(prev => prev === item.id ? null : item.id)}
-                className={`bg-white p-6 rounded-[24px] shadow-sm border transition-all duration-300 flex items-center justify-between cursor-pointer ${
-                  (activeOrgan === item.id || selectedOrgan === item.id) ? 'border-teal-500 ring-4 ring-teal-500/10 -translate-x-2' : 'border-orange-50'
-                }`}
-              >
+              <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-orange-50 flex items-center justify-between hover:border-teal-200 transition-colors">
                 <div>
-                  <p className="text-slate-400 text-[10px] font-black mb-1 uppercase tracking-widest">{item.label}</p>
+                  <p className="text-slate-400 text-xs font-bold mb-1">{item.label}</p>
                   <div className="flex items-baseline gap-1">
-                    <span className={`text-3xl font-black ${item.status === 'risk' ? 'text-red-500' : 'text-slate-800'}`}>{item.value}</span>
-                    <span className="text-slate-400 text-xs font-bold uppercase">{item.unit}</span>
+                    <span className="text-2xl font-black text-slate-900">{item.value}</span>
+                    <span className="text-slate-400 text-sm font-bold">{item.unit}</span>
                   </div>
                 </div>
-                <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider ${
-                  item.status === 'risk' ? 'bg-red-50 text-red-500 border border-red-100' : 
-                  item.status === 'borderline' ? 'bg-amber-50 text-amber-500 border border-amber-100' : 
-                  'bg-teal-50 text-teal-500 border border-teal-100'
-                }`}>
+                <div className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider ${item.status === 'risk' ? 'bg-red-50 text-red-500' : item.status === 'borderline' ? 'bg-amber-50 text-amber-500' : 'bg-teal-50 text-teal-500'}`}>
                   {item.status === 'risk' ? '위험' : item.status === 'borderline' ? '주의' : '정상'}
                 </div>
               </div>
@@ -167,6 +139,7 @@ export default function HealthReport() {
           </div>
         </div>
 
+        {/* Metrics Cards */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white p-8 rounded-3xl border border-orange-50 text-center shadow-sm">
             <p className="text-slate-400 text-xs font-bold mb-2 uppercase tracking-widest">AI 분석 신뢰도</p>

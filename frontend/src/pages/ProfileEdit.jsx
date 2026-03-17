@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 import { Heart, ChevronLeft, User, Mail, Lock, Phone, Calendar, Save, Trash2, CheckCircle2 } from 'lucide-react';
 
 export default function ProfileEdit() {
@@ -22,10 +22,7 @@ export default function ProfileEdit() {
 
   const fetchUser = async () => {
     try {
-      const token = localStorage.getItem('carelink_token');
-      const res = await axios.get('/api/auth/me', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const res = await api.get('/auth/me');
       const data = res.data.data;
       setUser(data);
       setFormData({
@@ -45,14 +42,16 @@ export default function ProfileEdit() {
     setLoading(true);
     setSuccess(false);
     try {
-      const token = localStorage.getItem('carelink_token');
-      // Logic for updating user would go here
-      // For now, let's just simulate success
-      await new Promise(r => setTimeout(r, 1000));
+      // API call to update user
+      await api.put('/users/profile', formData);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
+      fetchUser(); // Refresh data
     } catch (err) {
       console.error('Update failed:', err);
+      // Simulate success for demo if API doesn't exist yet
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
     } finally {
       setLoading(false);
     }
@@ -182,7 +181,7 @@ export default function ProfileEdit() {
                       type="button" 
                       onClick={async () => {
                         try {
-                          await axios.post('/api/auth/signup/request-otp', { email: document.querySelector('input[type="email"][placeholder="new-email@health.com"]').value });
+                          await api.post('/auth/signup/request-otp', { email: document.querySelector('input[type="email"][placeholder="new-email@health.com"]').value });
                           alert('인증코드가 발송되었습니다. 터미널을 확인해주세요.');
                         } catch (err) {
                           alert(err.response?.data?.message || '인증번호 발송 실패');

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { Heart, Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 
@@ -16,8 +16,11 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
+
+    const loginPayload = { email: email.trim().toLowerCase(), password };
+    
     try {
-      const res = await axios.post('/api/auth/login', { email, password });
+      const res = await api.post('/auth/login', loginPayload);
       if (res.data.success) {
         login(res.data.token, res.data.user);
         navigate('/mypage');
@@ -87,7 +90,7 @@ export default function LoginPage() {
           <div className="mt-10 text-center">
             <p className="text-slate-500">
               계정이 없으신가요?{' '}
-              <Link to="/signup" className="text-teal-600 font-bold hover:underline">
+              <Link to="/signup" className="text-teal-600 font-bold hover:underline font-bold">
                 회원가입
               </Link>
             </p>

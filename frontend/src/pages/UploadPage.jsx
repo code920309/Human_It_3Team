@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 import { Heart, ChevronLeft, Upload, FileText, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function UploadPage() {
@@ -22,18 +22,16 @@ export default function UploadPage() {
     e.preventDefault();
     setUploading(true);
     try {
-      const token = localStorage.getItem('carelink_token');
-      
       const formData = new FormData();
       if (file) {
         formData.append('report', file);
+        formData.append('year', year);
       }
       
-      const res = await axios.post('/api/reports/upload', 
-        file ? formData : { data: manualData, year }, 
+      const res = await api.post('/reports/upload', 
+        file ? formData : { ...manualData, year }, 
         {
           headers: { 
-            'Authorization': `Bearer ${token}`,
             'Content-Type': file ? 'multipart/form-data' : 'application/json'
           }
         }
@@ -71,7 +69,7 @@ export default function UploadPage() {
           <section className="space-y-8">
             <div className="text-center lg:text-left">
               <h2 className="text-2xl font-black text-slate-900 mb-2">스마트 업로드</h2>
-              <p className="text-slate-500 font-medium leading-relaxed">검진 결과지 사진이나 PDF를 업로드하면<br />AI가 자동으로 수치를 정밀하게 추출합니다.</p>
+              <p className="text-slate-500 font-medium leading-relaxed">검진 결과지 사진이나 PDF를 업로드하면 <br />AI가 자동으로 수치를 정밀하게 추출합니다.</p>
             </div>
             
             <label className="border-4 border-dashed border-slate-200 rounded-3xl p-12 flex flex-col items-center justify-center bg-white hover:border-teal-400 hover:bg-teal-50 transition-all cursor-pointer group shadow-sm">
@@ -93,7 +91,7 @@ export default function UploadPage() {
                   <span className={file ? "text-teal-500 font-bold" : "text-slate-300"}>{file ? "준비완료" : "대기 중"}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500 font-medium">2. Gemini 1.5 Flash 지능형 분석</span>
+                  <span className="text-slate-500 font-medium">2. Gemini 1.5 Flash 지표 분석</span>
                   <span className={file ? "text-teal-500 font-bold" : "text-slate-300"}>{file ? "준비완료" : "대기 중"}</span>
                 </div>
               </div>
@@ -104,7 +102,7 @@ export default function UploadPage() {
           <section className="space-y-8">
             <div className="text-center lg:text-left">
               <h2 className="text-2xl font-black text-slate-900 mb-2">데이터 확인 및 입력</h2>
-              <p className="text-slate-500 font-medium leading-relaxed">추출된 수치를 확인하거나 직접 정보를<br />입력하여 건강 분석을 시작하세요.</p>
+              <p className="text-slate-500 font-medium leading-relaxed">추출된 수치를 확인하거나 직접 정보를 <br />입력하여 건강 분석을 시작하세요.</p>
             </div>
 
             <form onSubmit={handleUploadSubmit} className="bg-white p-8 rounded-3xl shadow-sm border border-orange-50 space-y-6">

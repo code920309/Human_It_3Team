@@ -63,7 +63,7 @@ exports.toggleComplete = async (req, res) => {
     try {
         await pool.query(
             'UPDATE action_plans SET is_completed = ? WHERE id = ? AND user_id = ?',
-            [is_completed ? 1 : 0, id, req.user.id]
+            [is_completed ? true : false, id, req.user.id]
         );
         return res.json({ success: true, message: '업데이트 성공' });
     } catch (err) {

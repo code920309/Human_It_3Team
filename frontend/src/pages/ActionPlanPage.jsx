@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
+import api from '../api/axios';
 import { CheckCircle2, Circle, Trophy, Flame, Target, BookOpen, Utensils, Footprints, Loader2, ChevronLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -14,10 +14,7 @@ export default function ActionPlanPage() {
 
     const fetchPlans = async () => {
         try {
-            const token = localStorage.getItem('carelink_token');
-            const res = await axios.get('/api/action-plans/current', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.get('/action-plans/current');
             if (res.data.success) {
                 setPlans(res.data.data);
             }
@@ -30,16 +27,12 @@ export default function ActionPlanPage() {
 
     const toggleComplete = async (plan) => {
         try {
-            const token = localStorage.getItem('carelink_token');
             const newStatus = !plan.is_completed;
             
             // Optimistic Update
             setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, is_completed: newStatus } : p));
 
-            await axios.patch(`/api/action-plans/${plan.id}/toggle`, 
-                { is_completed: newStatus },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            await api.patch(`/action-plans/${plan.id}/toggle`, { is_completed: newStatus });
         } catch (err) {
             // Revert on error
             setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, is_completed: !plan.is_completed } : p));
