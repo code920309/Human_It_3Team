@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 import { Heart, Mail, Lock, User, Calendar, ArrowRight, ShieldCheck, AlertCircle, ChevronRight } from 'lucide-react';
 
 export default function SignupPage() {
@@ -25,7 +25,7 @@ export default function SignupPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/signup/request-otp', { email });
+      const res = await api.post('/auth/signup/request-otp', { email });
       if (res.data.success) {
         setIsOtpSent(true);
       }
@@ -40,7 +40,7 @@ export default function SignupPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/signup/verify-otp', { email, otp });
+      const res = await api.post('/auth/signup/verify-otp', { email, otp });
       if (res.data.success) {
         setIsEmailVerified(true);
         setStep(2);
@@ -57,7 +57,7 @@ export default function SignupPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/signup', {
+      const res = await api.post('/auth/signup', {
         email,
         ...formData
       });

@@ -1,5 +1,5 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import axios from 'axios';
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import api from '../api/axios';
 
 const AuthContext = createContext();
 
@@ -10,17 +10,15 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         const token = localStorage.getItem('carelink_token');
         if (token) {
-            checkAuth(token);
+            checkAuth();
         } else {
             setLoading(false);
         }
     }, []);
 
-    const checkAuth = async (token) => {
+    const checkAuth = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/auth/me', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.get('/auth/me');
             if (res.data.success) {
                 setUser(res.data.data);
             }

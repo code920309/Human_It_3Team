@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 import { Heart, ChevronLeft, Upload, FileText, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function UploadPage() {
@@ -22,29 +22,16 @@ export default function UploadPage() {
     e.preventDefault();
     setUploading(true);
     try {
-      const token = localStorage.getItem('carelink_token');
-      
       const formData = new FormData();
       if (file) {
         formData.append('report', file);
-      } else {
-        // If manual, we send as JSON but let's stick to the current API
-        // Existing API (from my memory of previous turns) used multipart/form-data for OCR
-        // but if it's manual we might need a different endpoint or handle it.
-        // Actually the provided code uses a simplified JSON post.
-        // I will implement a bridge.
+        formData.append('year', year);
       }
       
-      // Let's use the existing logic from the previous UploadPage
-      // I need to see what the previous UploadPage logic was.
-      // Wait, I am overwriting it. I should have viewed it first.
-      // But I remember I implemented healthRecord upload.
-      
-      const res = await axios.post('http://localhost:5000/api/reports/upload', 
-        file ? formData : { data: manualData, year }, 
+      const res = await api.post('/reports/upload', 
+        file ? formData : { ...manualData, year }, 
         {
           headers: { 
-            'Authorization': `Bearer ${token}`,
             'Content-Type': file ? 'multipart/form-data' : 'application/json'
           }
         }

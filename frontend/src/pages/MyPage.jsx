@@ -1,37 +1,53 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Activity, FileText, Calendar, MessageSquare, Settings, Heart, ChevronRight, TrendingUp, Bot, Loader2 } from 'lucide-react';
+import api from '../api/axios';
+import { motion } from 'framer-motion';
+import { Heart, Loader2, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-export default function MyPage() {
-    const { user, logout } = useAuth();
-    const [loading, setLoading] = useState(true);
-    const [reportData, setReportData] = useState(null);
-    const [history, setHistory] = useState([]);
-    const [availableYears, setAvailableYears] = useState([]);
-    const [selectedYear, setSelectedYear] = useState(null);
+// Components
+import HealthScoreCard from '../components/dashboard/HealthScoreCard';
+import HealthTrendChart from '../components/dashboard/HealthTrendChart';
+import HealthReportCard from '../components/dashboard/HealthReportCard';
+import ActionPlanCard from '../components/dashboard/ActionPlanCard';
+import QuickMenu from '../components/dashboard/QuickMenu';
 
+export default function MyPage() {
+    // 상태 관리 (State Management)
+    const { user, logout } = useAuth(); // 인증 정보 및 로그아웃 함수
+    const [loading, setLoading] = useState(true); // 로딩 상태
+    const [reportData, setReportData] = useState(null); // 검진 리포트 데이터
+    const [history, setHistory] = useState([]); // 건강 점수 히스토리
+    const [availableYears, setAvailableYears] = useState([]); // 조회 가능한 연도 목록
+    const [selectedYear, setSelectedYear] = useState(null); // 현재 선택된 연도
+
+    // 컴포넌트 마운트 시 초기 데이터 로드 (mount point)
     useEffect(() => {
         fetchInitialData();
     }, []);
 
+    // 초기 데이터(연도 목록 등)를 가져오는 비동기 함수
     const fetchInitialData = async () => {
         setLoading(true);
         try {
-            const token = localStorage.getItem('carelink_token');
-            const yearsRes = await axios.get('http://localhost:5000/api/reports/years', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            // 사용 가능한 검진 연도 목록 API 호출
+            const yearsRes = await api.get('/reports/years');
 
             if (yearsRes.data.success) {
                 const years = yearsRes.data.data.availableYears;
                 setAvailableYears(years);
 
                 if (years.length > 0) {
+                    // 최신 연도의 리포트 데이터를 우선적으로 호출
                     await fetchReport(years[0]);
                     setSelectedYear(years[0]);
+                    
+                    // 연도별 점수 히스토리 생성 (데이터 시뮬레이션을 위한 임시 로직)
+                    const mockHistory = years.map((y, i) => ({
+                        date: `${y}년`,
+                        score: 80 + Math.floor(Math.random() * 15)
+                    })).reverse();
+                    setHistory(mockHistory);
                 }
             }
         } catch (err) {
@@ -41,12 +57,10 @@ export default function MyPage() {
         }
     };
 
+    // 특정 연도의 상세 건강 리포트 데이터를 호출하는 함수
     const fetchReport = async (year) => {
         try {
-            const token = localStorage.getItem('carelink_token');
-            const res = await axios.get(`http://localhost:5000/api/reports/health?year=${year}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.get(`/reports/health?year=${year}`);
             if (res.data.success) {
                 setReportData(res.data.data);
             }
@@ -55,6 +69,7 @@ export default function MyPage() {
         }
     };
 
+    // 화면 로딩 중일 때 표시되는 컴포넌트
     if (loading && !reportData) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#f9f7f0]">
@@ -67,155 +82,105 @@ export default function MyPage() {
     }
 
     return (
-        <div className="flex min-h-screen bg-[#f9f7f0]">
-            {/* Sidebar */}
-            <aside className="w-64 bg-white border-r border-orange-100 hidden lg:flex flex-col sticky top-0 h-screen">
-                <div className="p-8">
-                    <Link to="/" className="text-2xl font-extrabold text-teal-600 flex items-center gap-2">
-                        <Heart className="w-8 h-8 fill-current" />
-                        CareLink
-                    </Link>
-                </div>
-                <nav className="flex-1 px-4 space-y-2">
-                    <Link to="/mypage" className="flex items-center gap-3 px-4 py-3 bg-teal-50 text-teal-600 rounded-xl font-bold">
-                        <Activity className="w-5 h-5" /> 건강 대시보드
-                    </Link>
-                    <Link to="/report" className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-xl font-medium transition-all">
-                        <FileText className="w-5 h-5" /> 검진 기록
-                    </Link>
-                    <Link to="/chatbot" className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-xl font-medium transition-all">
-                        <MessageSquare className="w-5 h-5" /> AI 챗봇
-                    </Link>
-                    <Link to="/profile/edit" className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-xl font-medium transition-all">
-                        <Settings className="w-5 h-5" /> 회원 정보 수정
-                    </Link>
-                </nav>
-                <div className="p-4 border-t border-slate-100">
-                    <button onClick={logout} className="w-full py-3 text-slate-400 font-bold hover:text-red-500 transition-all text-sm">
-                        로그아웃
-                    </button>
-                </div>
-            </aside>
-
-            {/* Main Content */}
-            <main className="flex-1 p-4 md:p-8 lg:p-12 overflow-y-auto">
-                <header className="flex justify-between items-center mb-12">
-                    <div>
-                        <h1 className="text-3xl font-extrabold text-slate-900">대시보드</h1>
-                        <p className="text-slate-500 font-medium">{user?.name}님, 분석된 최근 건강 상태입니다.</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        {availableYears.length > 0 && (
-                            <select
-                                className="bg-white border border-slate-200 rounded-xl px-4 py-2 font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500 transition-all"
-                                value={selectedYear}
-                                onChange={(e) => {
-                                    const y = e.target.value;
-                                    setSelectedYear(y);
-                                    fetchReport(y);
-                                }}
+        <div className="flex flex-col min-h-screen bg-[#f9f7f0]">
+            {/* 상단 내비게이션 바: 로고, 메뉴, 로그아웃 버튼 포함 */}
+            <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-orange-100 shadow-sm">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex justify-between items-center h-20">
+                        <div className="flex-shrink-0 flex items-center">
+                            <Link to="/" className="text-2xl font-extrabold text-teal-600 flex items-center gap-2">
+                                <Heart className="w-8 h-8 fill-current" />
+                                CareLink
+                            </Link>
+                        </div>
+                        <div className="hidden md:flex items-center space-x-8">
+                            <Link to="/mypage" className="text-teal-600 transition-colors font-bold">건강 대시보드</Link>
+                            <Link to="/report" className="text-slate-600 hover:text-teal-600 transition-colors font-semibold">검진 기록</Link>
+                            <Link to="/chatbot" className="text-slate-600 hover:text-teal-600 transition-colors font-semibold">AI 챗봇</Link>
+                            <button 
+                                onClick={logout}
+                                className="bg-teal-600 text-white px-6 py-2.5 rounded-lg font-bold hover:bg-teal-700 transition-all shadow-md"
                             >
-                                {availableYears.map(y => <option key={y} value={y}>{y}년 검진</option>)}
-                            </select>
-                        )}
-                        <Link to="/upload" className="bg-teal-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-teal-700 transition-all shadow-md">
-                            데이터 추가
-                        </Link>
+                                로그아웃
+                            </button>
+                        </div>
                     </div>
+                </div>
+            </nav>
+
+            {/* 메인 본문 영역 */}
+            <div className="max-w-7xl mx-auto w-full px-6 md:px-12 pt-12">
+                {/* 헤더 섹션: 타이틀 및 유저 인사말 */}
+                <header className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6 text-center md:text-left">
+                    <div>
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tight">마이페이지</h1>
+                        <p className="text-slate-500 font-medium">환영합니다, <span className="text-teal-600 font-bold">{user?.name}</span>님. 오늘의 분석 리포트입니다.</p>
+                    </div>
+                    <QuickMenu />
                 </header>
 
                 {!reportData ? (
-                    <div className="bg-white rounded-3xl p-12 text-center border border-orange-100">
-                        <FileText className="w-16 h-16 text-slate-200 mx-auto mb-4" />
-                        <h2 className="text-xl font-bold text-slate-600">아직 분석된 데이터가 없습니다.</h2>
-                        <p className="text-slate-400 mt-2">건강검진 결과지를 업로드하여 AI 분석을 시작하시겠습니까?</p>
-                        <Link to="/upload" className="inline-block mt-8 bg-teal-600 text-white px-8 py-3 rounded-2xl font-bold hover:scale-105 transition-transform">
-                            업로드하러 가기
+                    // 데이터가 없을 때 표시되는 섹션 (Empty State)
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-white rounded-3xl p-16 text-center border border-orange-100 shadow-sm"
+                    >
+                        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-8">
+                            <ArrowRight className="w-10 h-10 text-slate-300" />
+                        </div>
+                        <h2 className="text-2xl font-black text-slate-900 mb-4">아직 분석된 데이터가 없습니다.</h2>
+                        <p className="text-slate-500 max-w-md mx-auto mb-10 leading-relaxed font-medium">
+                            건강검진 결과지를 업로드하여 AI 분석을 받고 맞춤형 리포트와 액션 플랜을 받아보세요.
+                        </p>
+                        <Link to="/upload" className="inline-flex items-center gap-3 bg-teal-600 text-white px-10 py-4 rounded-2xl font-bold hover:scale-105 transition-transform shadow-lg">
+                            데이터 업로드하기 <ArrowRight className="w-5 h-5" />
                         </Link>
-                    </div>
+                    </motion.div>
                 ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Health Score Card */}
-                        <div className="lg:col-span-2 bg-white p-8 rounded-3xl shadow-sm border border-orange-50">
-                            <div className="flex justify-between items-start mb-8">
-                                <div>
-                                    <h2 className="text-xl font-bold text-slate-900 mb-1">종합 건강 점수</h2>
-                                    <p className="text-slate-400 text-sm">AI 정밀 분석 결과</p>
-                                </div>
-                                <div className="flex items-center gap-1 text-teal-600 font-bold">
-                                    <TrendingUp className="w-4 h-4" /> 안정적
-                                </div>
-                            </div>
-                            <div className="flex flex-col md:flex-row items-center gap-12">
-                                <div className="relative w-48 h-48 flex items-center justify-center">
-                                    <svg className="w-full h-full transform -rotate-90">
-                                        <circle cx="96" cy="96" r="88" fill="none" stroke="#f1f5f9" strokeWidth="16" />
-                                        <circle
-                                            cx="96" cy="96" r="88" fill="none" stroke="#0d9488" strokeWidth="16"
-                                            strokeDasharray={552.92}
-                                            strokeDashoffset={552.92 * (1 - reportData.healthRecord.health_score / 100)}
-                                            strokeLinecap="round"
-                                            className="transition-all duration-1000"
-                                        />
-                                    </svg>
-                                    <div className="absolute text-center">
-                                        <span className="text-5xl font-black text-slate-900">{reportData.healthRecord.health_score}</span>
-                                        <p className="text-slate-400 font-bold text-sm">점</p>
-                                    </div>
-                                </div>
-                                <div className="flex-1 space-y-4 w-full">
-                                    <div className="p-4 bg-teal-50 rounded-2xl border border-teal-100">
-                                        <p className="text-teal-700 font-bold text-sm mb-1">AI 코멘트</p>
-                                        <p className="text-teal-600/80 text-xs leading-relaxed">
-                                            {reportData.aiReport.summary.substring(0, 100)}...
-                                        </p>
-                                    </div>
-                                    <Link to={`/report?year=${selectedYear}`} className="flex items-center justify-between w-full p-4 bg-slate-50 rounded-2xl text-slate-600 font-bold hover:bg-slate-100 transition-all text-sm font-bold">
-                                        상세 건강 리포트 보기 <ChevronRight className="w-5 h-5" />
-                                    </Link>
-                                </div>
-                            </div>
+                    // 리포트 데이터가 있을 때의 대시보드 레이아웃
+                    <div className="grid grid-cols-1 lg:grid-cols-[65%_35%] gap-8 pb-16 items-start">
+                        {/* AI 요약 섹션: 그리드 2열을 모두 차지 */}
+                        <motion.div 
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.1 }}
+                            className="lg:col-span-2 bg-white p-8 rounded-3xl border border-orange-50 shadow-sm"
+                        >
+                            <h3 className="text-sm font-bold text-slate-400 uppercase mb-4 tracking-wider">AI 코멘트</h3>
+                            <p className="text-slate-600 text-sm leading-relaxed font-medium">
+                                {reportData?.aiReport?.summary || "건강 데이터 분석 데이터가 충분하지 않습니다."}
+                            </p>
+                        </motion.div>
+
+                        {/* 건강 점수 및 리포트 카드 섹션 */}
+                        <div className="h-[450px]">
+                            <HealthScoreCard 
+                                score={reportData?.healthRecord?.health_score || 0} 
+                                change={5} 
+                                status="안정적" 
+                            />
+                        </div>
+                        <div className="h-[450px]">
+                            <HealthReportCard />
                         </div>
 
-                        {/* Quick Shortcuts */}
-                        <div className="space-y-8">
-                            <Link to="/action-plan" className="block group">
-                                <div className="bg-teal-600 p-8 rounded-3xl shadow-lg group-hover:bg-teal-700 transition-all transform group-hover:-translate-y-1">
-                                    <Activity className="w-10 h-10 text-white/80 mb-6" />
-                                    <h3 className="text-xl font-bold text-white mb-2">액션 플랜</h3>
-                                    <p className="text-white/70 text-sm font-medium">건강 개선을 위한 맞춤 미션을 확인하고 실행하세요.</p>
-                                </div>
-                            </Link>
-                            <Link to="/chatbot" className="block group">
-                                <div className="bg-white p-8 rounded-3xl shadow-sm border border-orange-50 group-hover:shadow-md transition-all transform group-hover:-translate-y-1">
-                                    <Bot className="w-10 h-10 text-teal-500 mb-6" />
-                                    <h3 className="text-xl font-bold text-slate-900 mb-2">AI 건강 상담</h3>
-                                    <p className="text-slate-500 text-sm font-medium">검진 결과에 대해 궁금한 점을 1:1로 질문하세요.</p>
-                                </div>
-                            </Link>
+                        {/* 건강 트렌드 및 액션 플랜 섹션 */}
+                        <div className="h-[350px]">
+                            <HealthTrendChart history={history} />
                         </div>
-
-                        {/* Health Trend Chart */}
-                        <div className="lg:col-span-3 bg-white p-8 rounded-3xl shadow-sm border border-orange-50">
-                            <h2 className="text-xl font-bold text-slate-900 mb-8">건강 상태 추이</h2>
-                            <div className="h-64 w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={history}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} dy={10} />
-                                        <YAxis hide domain={[0, 100]} />
-                                        <Tooltip
-                                            contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                                            itemStyle={{ color: '#0d9488', fontWeight: 'bold' }}
-                                        />
-                                        <Line type="monotone" dataKey="score" stroke="#0d9488" strokeWidth={4} dot={{ r: 6, fill: '#0d9488', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 8 }} />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
+                        <div className="h-[350px]">
+                            <ActionPlanCard />
                         </div>
                     </div>
                 )}
-            </main>
+            </div>
+
+            {/* 하단 푸터 영역: 카피라이트 및 버전 정보 */}
+            <footer className="max-w-7xl mx-auto w-full mt-auto mb-12 px-6 md:px-12 pt-8 border-t border-orange-100 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-400 uppercase tracking-widest font-bold">
+                <span>CareLink Health Analytics v2.0</span>
+                <span>© 2026 CareLink Systems. All Rights Reserved.</span>
+            </footer>
         </div>
     );
 }

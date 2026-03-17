@@ -55,7 +55,7 @@ exports.verifyOTP = async (req, res) => {
             return res.status(400).json({ success: false, message: '인증코드가 틀렸거나 만료되었습니다.' });
         }
 
-        await pool.query('UPDATE users SET email_verified = 1, email_change_token = NULL, email_token_expires = NULL WHERE email = ?', [email]);
+        await pool.query('UPDATE users SET email_verified = true, email_change_token = NULL, email_token_expires = NULL WHERE email = ?', [email]);
 
         return res.json({ success: true, message: '이메일 인증이 완료되었습니다.' });
     } catch (err) {
@@ -65,7 +65,8 @@ exports.verifyOTP = async (req, res) => {
 };
 
 exports.signup = async (req, res) => {
-    const { email, password, name, birth_date, gender } = req.body;
+    const { password, name, birth_date, gender } = req.body;
+    const email = req.body.email ? req.body.email.trim() : '';
     
     if (!email || !password || !name || !birth_date || !gender) {
         return res.status(400).json({ success: false, message: '모든 항목을 입력해주세요.' });
@@ -93,12 +94,28 @@ exports.signup = async (req, res) => {
 };
 
 exports.login = async (req, res) => {
-    const { email, password } = req.body;
+    const { password } = req.body;
+    const email = req.body.email ? String(req.body.email).trim().toLowerCase() : '';
 
     try {
-        const [users] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
-        if (users.length === 0 || !users[0].email_verified) {
-            return res.status(400).json({ success: false, message: '이메일 또는 비밀번호가 틀렸거나 인증되지 않은 계정입니다.' });
+        // Revert to '?' which is handled by our db.js adapter for maximum consistency
+        const [users] = await pool.query(
+            'SELECT * FROM users WHERE LOWER(TRIM(email)) = LOWER(?)', 
+            [email]
+        );
+        
+        if (users.length === 0) {
+            const bodyType = typeof req.body;
+            const bodyKeys = Object.keys(req.body || {}).join(', ');
+            const bodyPreview = JSON.stringify(req.body).substring(0, 100);
+            return res.status(400).json({ 
+                success: false, 
+                message: `가입되지 않은 이메일입니다. (입력: [${email}], 길이: ${email.length}, 타입: ${bodyType}, 키: [${bodyKeys}], 내용: ${bodyPreview})` 
+            });
+        }
+
+        if (!users[0].email_verified) {
+            return res.status(400).json({ success: false, message: '이메일 인증이 완료되지 않은 계정입니다.' });
         }
 
         const user = users[0];
@@ -107,10 +124,15 @@ exports.login = async (req, res) => {
             return res.status(400).json({ success: false, message: '이메일 또는 비밀번호가 틀렸습니다.' });
         }
 
+        if (!process.env.JWT_SECRET) {
+            console.error('JWT_SECRET is not defined in environment variables!');
+            return res.status(500).json({ success: false, message: '인증 서버 설정 오류 (JWT_SECRET 누락)' });
+        }
+
         const token = jwt.sign(
             { id: user.id, email: user.email },
             process.env.JWT_SECRET,
-            { expiresIn: '1h' }
+            { expiresIn: '24h' }
         );
 
         return res.json({
