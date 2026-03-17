@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/axios';
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -15,6 +15,51 @@ export default function HomePage() {
 
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
+
+  const [showReviewModal, setShowReviewModal] = useState(false); // 팝업 보임/숨김
+  const [rating, setRating] = useState(0); // 선택된 별점 (1~5)
+  const [reviewText, setReviewText] = useState(''); // 작성된 리뷰 내용
+
+  // 로그인 상태일 때 임시로 팝업 띄우기 (페이지 진입 0.5초 후)
+  // TODO: 나중에 이 부분을 '업로드 후 1시간 뒤' 조건으로 변경할 예정입니다.
+  useEffect(() => {
+    // 브라우저 임시 저장소에서 'hasReviewed' 기록이 있는지 확인
+    const hasReviewed = localStorage.getItem('hasReviewed');
+
+    // 로그인 상태(isAuthenticated)이고, 리뷰를 아직 안 썼을(!hasReviewed) 때만 실행
+    if (isAuthenticated && !hasReviewed) {
+      const timer = setTimeout(() => {
+        setShowReviewModal(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated]);
+
+  // 리뷰 제출 함수 (현재는 콘솔 확인용, 추후 DB 연동)
+  const handleReviewSubmit = () => {
+    if (rating === 0) {
+      alert("별점을 선택해주세요!");
+      return;
+    }
+    if (reviewText.trim() === '') {
+      alert("리뷰 내용을 입력해주세요!");
+      return;
+    }
+    
+    console.log("제출할 별점:", rating);
+    console.log("제출할 리뷰 내용:", reviewText);
+    
+    // TODO: MariaDB 데이터 전송 API 호출 (나중에 추가)
+    
+    alert("소중한 리뷰가 등록되었습니다!");
+    
+    // ⭐ 핵심! 성공적으로 리뷰를 남기면 브라우저에 'hasReviewed' 도장을 쾅 찍어줍니다.
+    localStorage.setItem('hasReviewed', 'true'); 
+    
+    setShowReviewModal(false);
+    setRating(0);
+    setReviewText('');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault(); // 페이지 새로고침 방지
@@ -200,6 +245,56 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {showReviewModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl transform transition-all">
+            <h2 className="text-2xl font-extrabold text-slate-900 mb-2 text-center">
+              CareLink 서비스는 어떠셨나요?
+            </h2>
+            <p className="text-slate-500 text-center mb-6">
+              소중한 리뷰를 남겨주시면 서비스 개선에 큰 힘이 됩니다.
+            </p>
+
+            {/* 별점 선택 영역 */}
+            <div className="flex justify-center gap-2 mb-6 cursor-pointer">
+              {[1, 2, 3, 4, 5].map((starValue) => (
+                <Star
+                  key={starValue}
+                  onClick={() => setRating(starValue)}
+                  className={`w-10 h-10 transition-colors cursor-pointer ${
+                    starValue <= rating ? "fill-amber-400 text-amber-400" : "fill-transparent text-slate-300"
+                  }`}
+                />
+              ))}
+            </div>
+
+            {/* 리뷰 입력 영역 */}
+            <textarea
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6 focus:ring-2 focus:ring-teal-500 outline-none resize-none h-32"
+              placeholder="여기에 솔직한 후기를 남겨주세요..."
+              value={reviewText}
+              onChange={(e) => setReviewText(e.target.value)}
+            />
+
+            {/* 버튼 영역 */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowReviewModal(false)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-lg transition-colors"
+              >
+                나중에 하기
+              </button>
+              <button
+                onClick={handleReviewSubmit}
+                className="flex-1 bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 rounded-lg transition-colors shadow-md"
+              >
+                등록하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Video */}
       <section className="py-24 bg-white">
