@@ -6,7 +6,7 @@ const authMiddleware = require('../utils/authMiddleware');
 // [Public Auth Routes]
 router.post('/signup/request-otp', authController.requestOTP);
 router.post('/signup/verify-otp', authController.verifyOTP);
-router.post('/signup', authController.register); // register로 변경됨
+router.post('/signup', authController.signup); // signup으로 통일
 router.post('/login', authController.login);
 router.post('/refresh', authController.refresh); // 토큰 자동 갱신용
 router.post('/logout', authController.logout);   // 보안 로그아웃

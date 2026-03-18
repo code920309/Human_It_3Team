@@ -56,6 +56,15 @@ export default function SignupPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
+
+    // [수정] Supabase 설정(Letters and digits)에 맞춘 보안 검증
+    const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d).{10,}$/;
+    if (!passwordRegex.test(formData.password)) {
+      setError('비밀번호는 최소 10자이며 영문과 숫자를 모두 포함해야 합니다.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await api.post('/auth/signup', {
         email,
@@ -135,13 +144,13 @@ export default function SignupPage() {
                       <input
                         type="text"
                         maxLength={8}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 focus:ring-2 focus:ring-teal-500 outline-none transition-all font-bold tracking-widest"
-                        placeholder="00000000"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 focus:ring-2 focus:ring-teal-500 outline-none transition-all font-bold tracking-widest text-center"
+                        placeholder="인증번호 8자리 숫자"
                         value={otp}
                         onChange={(e) => setOtp(e.target.value)}
                       />
                     </div>
-                    {/* [수정] OTP 길이가 8자리가 아닐 경우 버튼 비활성화 */}
+                    {/* [수집] 마스터의 Supabase 설정(Email OTP Length: 8)에 맞춰 8자리 필수 입력 적용 */}
                     <button
                       onClick={handleVerifyOtp}
                       disabled={loading || otp.length < 8}

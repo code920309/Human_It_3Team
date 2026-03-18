@@ -83,8 +83,10 @@ export default function ProfileEdit() {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       return alert('새 비밀번호가 일치하지 않습니다.');
     }
-    if (passwordData.newPassword.length < 10) {
-      return alert('새 비밀번호는 최소 10자 이상이어야 합니다.');
+    // [수정] Supabase 설정(Letters and digits)에 맞춘 보안 검증 추가
+    const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d).{10,}$/;
+    if (!passwordRegex.test(passwordData.newPassword)) {
+      return alert('비밀번호는 최소 10자이며 영문과 숫자를 모두 포함해야 합니다.');
     }
 
     setLoading(true);
