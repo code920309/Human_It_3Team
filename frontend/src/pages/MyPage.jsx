@@ -32,22 +32,30 @@ export default function MyPage() {
         try {
             // 사용 가능한 검진 연도 목록 API 호출
             const yearsRes = await api.get('/reports/years');
+            // [Portfolio Note] 데이터 정합성 확인을 위한 초기 연도 데이터 수신 디버깅
+            // console.log('[DEBUG] Years API Response:', yearsRes.data);
 
             if (yearsRes.data.success) {
                 const years = yearsRes.data.data.availableYears;
                 setAvailableYears(years);
 
                 if (years.length > 0) {
+                    // [Portfolio Note] 연도 리스트 존재 여부 확인 로그
+                    // console.log('[DEBUG] Available Years found:', years);
+                    
                     // 최신 연도의 리포트 데이터를 우선적으로 호출
                     await fetchReport(years[0]);
                     setSelectedYear(years[0]);
-                    
+
                     // 연도별 점수 히스토리 생성 (데이터 시뮬레이션을 위한 임시 로직)
                     const mockHistory = years.map((y, i) => ({
                         date: `${y}년`,
                         score: 80 + Math.floor(Math.random() * 15)
                     })).reverse();
                     setHistory(mockHistory);
+                } else {
+                    // [Portfolio Note] 데이터가 없는 유저의 예외 처리 흐름 추적
+                    // console.log('[DEBUG] No available years found for this user.');
                 }
             }
         } catch (err) {
@@ -60,7 +68,11 @@ export default function MyPage() {
     // 특정 연도의 상세 건강 리포트 데이터를 호출하는 함수
     const fetchReport = async (year) => {
         try {
+            // [Portfolio Note] 연도 변경 시 트리거되는 리포트 페칭 추적
+            // console.log(`[DEBUG] Fetching report for year: ${year}`);
             const res = await api.get(`/reports/health?year=${year}`);
+            // [Portfolio Note] 최종 리포트 데이터 바인딩 확인
+            // console.log('[DEBUG] Health Report API Response:', res.data);
             if (res.data.success) {
                 setReportData(res.data.data);
             }
@@ -96,8 +108,8 @@ export default function MyPage() {
                         <div className="hidden md:flex items-center space-x-8">
                             <Link to="/mypage" className="text-teal-600 transition-colors font-bold">건강 대시보드</Link>
                             <Link to="/report" className="text-slate-600 hover:text-teal-600 transition-colors font-semibold">검진 기록</Link>
-                            <Link to="/chatbot" className="text-slate-600 hover:text-teal-600 transition-colors font-semibold">AI 챗봇</Link>
-                            <button 
+
+                            <button
                                 onClick={logout}
                                 className="bg-teal-600 text-white px-6 py-2.5 rounded-lg font-bold hover:bg-teal-700 transition-all shadow-md"
                             >
@@ -121,7 +133,7 @@ export default function MyPage() {
 
                 {!reportData ? (
                     // 데이터가 없을 때 표시되는 섹션 (Empty State)
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         className="bg-white rounded-3xl p-16 text-center border border-orange-100 shadow-sm"
@@ -138,39 +150,85 @@ export default function MyPage() {
                         </Link>
                     </motion.div>
                 ) : (
-                    // 리포트 데이터가 있을 때의 대시보드 레이아웃
-                    <div className="grid grid-cols-1 lg:grid-cols-[65%_35%] gap-8 pb-16 items-start">
-                        {/* AI 요약 섹션: 그리드 2열을 모두 차지 */}
-                        <motion.div 
+                    // 리포트 데이터가 있을 때의 대시보드 레이아웃 (65:35 정밀 분할)
+                    <div className="flex flex-col gap-8 pb-16">
+                        {/* 상단: AI 코멘트 섹션 (가로 100%) */}
+                        <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 }}
-                            className="lg:col-span-2 bg-white p-8 rounded-3xl border border-orange-50 shadow-sm"
+                            className="w-full bg-white p-8 rounded-3xl border border-orange-50 shadow-sm"
                         >
-                            <h3 className="text-sm font-bold text-slate-400 uppercase mb-4 tracking-wider">AI 코멘트</h3>
-                            <p className="text-slate-600 text-sm leading-relaxed font-medium">
+                            <h3 className="text-sm font-bold text-teal-600 uppercase mb-4 tracking-wider flex items-center gap-2">
+                                <span className="w-2 h-2 bg-teal-500 rounded-full animate-pulse"></span>
+                                AI 건강 코멘트
+                            </h3>
+                            <p className="text-slate-700 text-lg leading-relaxed font-semibold">
                                 {reportData?.aiReport?.summary || "건강 데이터 분석 데이터가 충분하지 않습니다."}
                             </p>
                         </motion.div>
 
-                        {/* 건강 점수 및 리포트 카드 섹션 */}
-                        <div className="h-[450px]">
-                            <HealthScoreCard 
-                                score={reportData?.healthRecord?.health_score || 0} 
-                                change={5} 
-                                status="안정적" 
-                            />
-                        </div>
-                        <div className="h-[450px]">
-                            <HealthReportCard selectedYear={selectedYear} />
-                        </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-[65%_35%] gap-8">
+                            {/* 왼쪽 영역: 핵심 데이터 스트림 (65%) - 높이 1/3씩 3단 구성 */}
+                            <div className="flex flex-col gap-8">
+                                {/* 1. 건강 점수 카드 */}
+                                <div className="h-[400px]">
+                                    <HealthScoreCard
+                                        score={reportData?.healthRecord?.health_score || 0}
+                                        change={5}
+                                        status="안정적"
+                                    />
+                                </div>
+                                
+                                {/* 2. 건강 트렌드 차트 (왼쪽 65% - 더 넓은 폭 활용) */}
+                                <div className="h-[400px]">
+                                    <HealthTrendChart history={history} />
+                                </div>
 
-                        {/* 건강 트렌드 및 액션 플랜 섹션 */}
-                        <div className="h-[350px]">
-                            <HealthTrendChart history={history} />
-                        </div>
-                        <div className="h-[350px]">
-                            <ActionPlanCard />
+                                {/* 5. 상세 수치 영역 (New ✨) */}
+                                <motion.div 
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.2 }}
+                                    className="h-[400px] bg-white p-8 rounded-3xl border border-orange-100 shadow-sm flex flex-col"
+                                >
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h3 className="text-xl font-black text-slate-900">상세 건강 지표</h3>
+                                        <span className="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1 rounded-full uppercase">Details</span>
+                                    </div>
+                                    <div className="flex-1 grid grid-cols-2 gap-4">
+                                        {/* 상세 수치 아이템들이 들어갈 공간입니다. */}
+                                        <div className="bg-orange-50/50 rounded-2xl p-5 border border-orange-100/50 flex flex-col justify-center">
+                                            <p className="text-xs font-bold text-slate-400 mb-1">혈압</p>
+                                            <p className="text-2xl font-black text-slate-900">{reportData?.healthRecord?.blood_pressure_s}/{reportData?.healthRecord?.blood_pressure_d} <span className="text-sm font-medium text-slate-500">mmHg</span></p>
+                                        </div>
+                                        <div className="bg-teal-50/50 rounded-2xl p-5 border border-teal-100/50 flex flex-col justify-center">
+                                            <p className="text-xs font-bold text-slate-400 mb-1">공복 혈당</p>
+                                            <p className="text-2xl font-black text-slate-900">{reportData?.healthRecord?.fasting_glucose} <span className="text-sm font-medium text-slate-500">mg/dL</span></p>
+                                        </div>
+                                        <div className="bg-blue-50/50 rounded-2xl p-5 border border-blue-100/50 flex flex-col justify-center">
+                                            <p className="text-xs font-bold text-slate-400 mb-1">허리둘레</p>
+                                            <p className="text-2xl font-black text-slate-900">{reportData?.healthRecord?.waist} <span className="text-sm font-medium text-slate-500">cm</span></p>
+                                        </div>
+                                        <div className="bg-purple-50/50 rounded-2xl p-5 border border-purple-100/50 flex flex-col justify-center">
+                                            <p className="text-xs font-bold text-slate-400 mb-1">체질량지수 (BMI)</p>
+                                            <p className="text-2xl font-black text-slate-900">{reportData?.healthRecord?.bmi} <span className="text-sm font-medium text-slate-500">kg/㎡</span></p>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            </div>
+
+                            {/* 오른쪽 영역: 보조 데이터 스트림 (35%) - 높이 1/2씩 2단 구성 */}
+                            <div className="flex flex-col gap-8">
+                                {/* 3. 건강 리포트 카드 (오른쪽 35% - 요약 정보 정렬) */}
+                                <div className="h-[620px]">
+                                    <HealthReportCard />
+                                </div>
+
+                                {/* 4. 액션 플랜 카드 */}
+                                <div className="h-[620px]">
+                                    <ActionPlanCard />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
