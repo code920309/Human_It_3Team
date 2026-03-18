@@ -26,7 +26,7 @@ export default function HomePage() {
       const response = await api.post('/contacts', { email, message });
       if (response.data.success || response.status === 200 || response.status === 201) {
         alert('소중한 의견이 전달되었습니다!');
-        setEmail(''); // 입력창 비우기
+        setEmail('');
         setMessage('');
       } else {
         alert('전송에 실패했습니다. 다시 시도해주세요.');

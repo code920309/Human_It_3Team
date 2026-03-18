@@ -1,6 +1,26 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const axios = require('axios');
 const fs = require('fs');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+// Helper for direct REST call as requested by USER
+async function callGeminiREST(message, history = [], systemInstruction = "") {
+    const URL = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    
+    // Construct contents with system instruction if provided
+    const contents = history.map(h => ({
+        role: h.role === 'user' ? 'user' : 'model',
+        parts: [{ text: String(h.content || h.message || '') }]
+    }));
+
+    // Add current user message
+    contents.push({
+        role: "user",
+        parts: [{ text: message }]
+    });
 
 /**
  * API 키 분산 관리 시스템 (통합 버전)
@@ -170,6 +190,9 @@ exports.analyzeHealthReport = async (fileData, mimeType, userInfo) => {
 };
 
 exports.chatHealthConsultation = async (history, message, healthContext) => {
+
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
     const contextPrompt = `
 너는 CareLink의 전문 건강 상담 AI다. 
 사용자의 건강검진 데이터를 기반으로 친절하고 전문적인 의학적 조언을 제공하라.
@@ -202,6 +225,15 @@ exports.chatHealthConsultation = async (history, message, healthContext) => {
             history: history.map(h => ({
                 role: h.role === 'user' ? 'user' : 'model',
                 parts: [{ text: h.content }]
+=======
+        return await callGeminiREST(message, history, contextPrompt);
+    } catch (error) {
+        console.error("REST Fallback Error:", error);
+        // SDK Fallback as last resort
+        const chat = model.startChat({
+            history: history.map(h => ({
+                role: h.role === 'user' ? 'user' : 'model',
+                parts: [{ text: String(h.content || h.message || '') }]
             })),
             systemInstruction: contextPrompt
         });
