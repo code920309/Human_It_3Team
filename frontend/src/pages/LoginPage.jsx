@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
@@ -9,8 +9,22 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  /* [수정] 아이디 저장, 자동 로그인 상태 관리 */
+  const [saveId, setSaveId] = useState(false);
+  const [keepLoggedIn, setKeepLoggedIn] = useState(false);
+
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  /* [수정] 컴포넌트 마운트 시 저장된 아이디 불러오기 */
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('carelink_saved_email');
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setSaveId(true);
+    }
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -22,7 +36,15 @@ export default function LoginPage() {
     try {
       const res = await api.post('/auth/login', loginPayload);
       if (res.data.success) {
-        login(res.data.token, res.data.user);
+        /* [수정] 아이디 저장 체크 여부에 따라 이메일 보관/삭제 */
+        if (saveId) {
+          localStorage.setItem('carelink_saved_email', email.trim().toLowerCase());
+        } else {
+          localStorage.removeItem('carelink_saved_email');
+        }
+
+        /* [수정] login 함수에 keepLoggedIn 파라미터 전달 */
+        login(res.data.token, res.data.user, keepLoggedIn);
         navigate('/mypage');
       } else {
         setError(res.data.message || '로그인에 실패했습니다.');
@@ -78,6 +100,27 @@ export default function LoginPage() {
               />
             </div>
 
+            {/* [수정] 아이디 저장 & 로그인 상태 유지 UI 체크박스 추가 */}
+            <div className="flex items-center justify-between text-sm text-slate-500 font-medium px-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={saveId} 
+                  onChange={(e) => setSaveId(e.target.checked)} 
+                  className="accent-teal-600 w-4 h-4 cursor-pointer" 
+                />
+                아이디 저장
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={keepLoggedIn} 
+                  onChange={(e) => setKeepLoggedIn(e.target.checked)} 
+                  className="accent-teal-600 w-4 h-4 cursor-pointer" 
+                />
+                로그인 상태 유지
+              </label>
+            </div>
             <button
               type="submit"
               disabled={loading}

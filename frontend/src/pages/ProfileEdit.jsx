@@ -42,7 +42,8 @@ export default function ProfileEdit() {
     setLoading(true);
     setSuccess(false);
     try {
-      const token = localStorage.getItem('carelink_token');
+      /* [수정] 로그인 유지(localStorage) 또는 임시 세션(sessionStorage) 토큰 확인 */
+      const token = localStorage.getItem('carelink_token') || sessionStorage.getItem('carelink_token');
       // Logic for updating user would go here
       // For now, let's just simulate success
       await new Promise(r => setTimeout(r, 1000));
