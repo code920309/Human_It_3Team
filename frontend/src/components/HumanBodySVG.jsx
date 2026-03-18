@@ -1,136 +1,125 @@
 /**
- * HumanBodySVG 컴포넌트
- * [기능] 인체 장기별 건강 상태를 SVG로 시각화하고 상호작용 제공
- * [구현] 
- *   - Props로 전달받은 organStatus에 따라 장기별 색상 동적 변경
- *   - 마우스 호버(activeOrgan) 및 클릭(selectedOrgan) 상태에 따른 강조 효과
- *   - Tailwind CSS와 인라인 SVG 스타일을 결합한 반응형 디자인
- * [역할] 복잡한 검진 수치를 사용자가 한눈에 이해할 수 있도록 직관적인 '인체 지도' 역할 수행
+ * HumanBodySVG 컴포넌트 - 장기 SVG만 렌더링 (레이블 없음)
+ * 레이블/범례는 HealthReport.jsx에서 외부에 배치
  */
 const HumanBodySVG = ({ organStatus, activeOrgan, onOrganHover, selectedOrgan, onOrganSelect }) => {
-  
-  /**
-   * getOrganColor 함수
-   * @param {string} organId - 장기 식별자 (heart, liver, pancreas 등)
-   * @returns {string} Hex 색상 코드
-   * 각 장기의 현재 상태(위험/주의/정상) 및 사용자 상호작용 상태를 판단하여 적절한 색상 반환
-   */
-  const getOrganColor = (organId) => {
-    // 호버되거나 선택된 장기는 강조색(Teal) 사용
-    if (activeOrgan === organId || selectedOrgan === organId) return '#0d9488'; // teal-600
-    
-    // 기본 상태에서는 위험도에 따라 색상 결정
-    const status = organStatus?.[organId] || 'normal';
-    switch (status) {
-      case 'risk': return '#ef4444'; // red-500
-      case 'borderline': return '#f59e0b'; // amber-500
-      default: return '#e2e8f0'; // slate-200
+
+  const getOrganColor = (id) => {
+    if (selectedOrgan === id) {
+      const status = organStatus?.[id] || 'normal';
+      if (status === 'risk')       return '#ef4444';
+      if (status === 'borderline') return '#f59e0b';
+      return '#14b8a6';
     }
+    return activeOrgan === id ? '#64748b' : '#94a3b8';
   };
 
+  const getFilter = (id) => {
+    if (selectedOrgan === id) return 'url(#activeGlow)';
+    if (activeOrgan === id)   return 'url(#greyGlow)';
+    return 'none';
+  };
+
+  const bind = (id) => ({
+    style: {
+      cursor: 'pointer',
+      transformBox: 'fill-box',
+      transformOrigin: 'center',
+      transform: activeOrgan === id ? 'scale(1.12)' : 'scale(1)',
+      transition: 'transform 0.18s ease',
+    },
+    onClick: () => onOrganSelect(id),
+    onMouseEnter: () => onOrganHover(id),
+    onMouseLeave: () => onOrganHover(null),
+  });
+
   return (
-    <div className="bg-white p-8 rounded-[32px] shadow-sm border border-orange-50 flex items-center justify-center min-h-[500px] relative overflow-hidden group">
-      {/* 배경 장식용 패턴 */}
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none">
-        <svg width="100%" height="100%">
-          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="1"/>
-          </pattern>
-          <rect width="100%" height="100%" fill="url(#grid)" />
-        </svg>
-      </div>
+    <svg viewBox="0 0 300 340" className="w-full h-auto">
+      <defs>
+        <filter id="greyGlow" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="4" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="activeGlow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="9" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
 
-      {/* 인체 SVG 모델 */}
-      <svg viewBox="0 0 200 500" className="w-64 h-full drop-shadow-2xl transition-all duration-500 group-hover:scale-[1.02]">
-        {/* 전체 몸체 실루엣 (Base) */}
-        <path 
-          d="M100 20c-20 0-35 15-35 35s15 35 35 35 35-15 35-35-15-35-35-35zM65 100c-20 0-40 20-40 40v100c0 10 10 20 20 20h20v150c0 20 15 35 35 35s35-15 35-35V260h20c10 0 20-10 20-20V140c0-20-20-40-40-40H65z" 
-          fill="#f8fafc"
-          stroke="#e2e8f0"
-          strokeWidth="2"
+      {/* 인체 실루엣 (상체만 - 허리까지) */}
+      <ellipse cx="150" cy="42" rx="32" ry="38" fill="#f1f5f9" stroke="#cbd5e1" strokeWidth="1.5" opacity="0.7"/>
+      <path
+        d="M118 85 C100 90 88 110 88 135 L88 230 C88 240 94 248 102 250
+           L100 310 Q100 330 120 332 L180 332 Q200 330 200 310 L198 250
+           C206 248 212 240 212 230 L212 135
+           C212 110 200 90 182 85 Z"
+        fill="#f1f5f9" stroke="#cbd5e1" strokeWidth="1.5" opacity="0.6"
+      />
+
+      {/* ===== 혈관 (Vessels) ===== */}
+      <g {...bind('vessels')} filter={getFilter('vessels')}>
+        <path d="M150 75 Q136 88 128 110 Q122 130 126 152" fill="none" stroke={getOrganColor('vessels')} strokeWidth="4.0" strokeLinecap="round" opacity="0.9"/>
+        <path d="M150 75 Q164 88 172 110 Q178 130 174 152" fill="none" stroke={getOrganColor('vessels')} strokeWidth="4.0" strokeLinecap="round" opacity="0.9"/>
+        <path d="M150 95 L150 310" fill="none" stroke={getOrganColor('vessels')} strokeWidth="3.0" strokeLinecap="round" opacity="0.75"/>
+        <path d="M142 305 Q136 318 130 330" fill="none" stroke={getOrganColor('vessels')} strokeWidth="3.0" strokeLinecap="round" opacity="0.7"/>
+        <path d="M158 305 Q164 318 170 330" fill="none" stroke={getOrganColor('vessels')} strokeWidth="3.0" strokeLinecap="round" opacity="0.7"/>
+        <title>혈관 및 순환계</title>
+      </g>
+
+      {/* ===== 심장 (Heart) ===== */}
+      <g {...bind('heart')} filter={getFilter('heart')}>
+        <path
+          d="M 116 178
+             C 98 168, 93 153, 100 145
+             C 107 137, 116 141, 116 150
+             C 116 141, 125 137, 132 145
+             C 139 153, 134 168, 116 178 Z"
+          fill={getOrganColor('heart')} opacity="0.92"
         />
+        <line x1="116" y1="151" x2="116" y2="168" stroke="#ffffff" strokeWidth="1" opacity="0.5"/>
+        <title>심장 (Heart)</title>
+      </g>
 
-        {/* 심장 (Heart): 관상동맥 및 심혈관 건강 지표 시각화 */}
+      {/* ===== 간 (Liver) - 쌍엽 실루엣 ===== */}
+      <g {...bind('liver')} filter={getFilter('liver')}>
         <path
-          id="heart"
-          d="M100 130c-5-10-15-10-20-5-5 5-5 15 0 20l20 20 20-20c5-5 5-15 0-20-5-5-15-5-20 5z"
-          fill={getOrganColor('heart')}
-          className="cursor-pointer transition-all duration-300 hover:filter hover:drop-shadow-[0_0_8px_rgba(20,184,166,0.6)]"
-          onMouseEnter={() => onOrganHover('heart')} // 부모 페이지의 리스트 하이라이트 연동
-          onMouseLeave={() => onOrganHover(null)}
-          onClick={() => onOrganSelect('heart')}
-        >
-          <title>심장 및 혈관 건강</title>
-        </path>
+          d="M 158 209
+             C 157 200, 160 191, 169 189
+             C 175 187, 181 191, 186 196
+             C 190 191, 200 185, 209 187
+             C 218 189, 222 200, 220 210
+             C 218 218, 211 222, 202 223
+             C 195 225, 189 222, 185 222
+             C 183 227, 179 232, 174 230
+             C 168 228, 161 221, 159 214 Z"
+          fill={getOrganColor('liver')} opacity="0.86"
+        />
+        <ellipse cx="178" cy="229" rx="5" ry="4" fill={getOrganColor('liver')} opacity="0.72"/>
+        <title>간 (Liver)</title>
+      </g>
 
-        {/* 간 (Liver): 간 기능 지표(ALT, AST 등) 시각화 */}
+      {/* ===== 췌장 (Pancreas) - 간 위로 이동 ===== */}
+      <g {...bind('pancreas')} filter={getFilter('pancreas')}>
         <path
-          id="liver"
-          d="M85 180h30c5 0 10 5 10 10v15c0 5-5 10-10 10h-30c-5 0-10-5-10-10v-15c0-5 5-10 10-10z"
-          fill={getOrganColor('liver')}
-          className="cursor-pointer transition-all duration-300"
-          onMouseEnter={() => onOrganHover('liver')}
-          onMouseLeave={() => onOrganHover(null)}
-          onClick={() => onOrganSelect('liver')}
-        >
-          <title>간 기능 지표 (ALT)</title>
-        </path>
+          d="M 155 182
+             C 151 177, 147 176, 143 178
+             C 139 176, 135 175, 131 178
+             C 127 176, 123 177, 119 182
+             C 121 187, 125 189, 129 186
+             C 133 189, 137 190, 141 186
+             C 145 189, 149 188, 155 182 Z"
+          fill={getOrganColor('pancreas')} opacity="0.88"
+        />
+        <title>췌장 (Pancreas)</title>
+      </g>
 
-        {/* 췌장/혈당 (Pancreas): 공복 혈당 지표 시각화 */}
-        <rect
-          id="pancreas"
-          x="85" y="210" width="30" height="8" rx="4"
-          fill={getOrganColor('pancreas')}
-          className="cursor-pointer transition-all duration-300"
-          onMouseEnter={() => onOrganHover('pancreas')}
-          onMouseLeave={() => onOrganHover(null)}
-          onClick={() => onOrganSelect('pancreas')}
-        >
-          <title>췌장 및 공복 혈당</title>
-        </rect>
-
-        {/* 혈관 (Vessels): 수축기/이완기 혈압 및 전체 순환계 시각화 */}
-        <path
-          id="vessels"
-          d="M40 140v80M160 140v80M80 300v100M120 300v100"
-          fill="none"
-          stroke={getOrganColor('vessels')}
-          strokeWidth="4"
-          strokeLinecap="round"
-          className="cursor-pointer transition-all duration-300"
-          onMouseEnter={() => onOrganHover('vessels')}
-          onMouseLeave={() => onOrganHover(null)}
-          onClick={() => onOrganSelect('vessels')}
-        >
-          <title>혈압 및 신체 순환</title>
-        </path>
-
-        {/* 복부 (Abdomen): 대사 증후군 및 복부 비만(허리둘레) 시각화 */}
-        <circle
-          id="abdomen"
-          cx="100" cy="235" r="25"
-          fill={getOrganColor('abdomen')}
-          fillOpacity="0.4"
-          stroke={getOrganColor('abdomen')}
-          strokeWidth="2"
-          className="cursor-pointer transition-all duration-300"
-          onMouseEnter={() => onOrganHover('abdomen')}
-          onMouseLeave={() => onOrganHover(null)}
-          onClick={() => onOrganSelect('abdomen')}
-        >
-          <title>복부 비만 (허리둘레)</title>
-        </circle>
-      </svg>
-
-      {/* 안내 오버레이 */}
-      <div className="absolute bottom-8 flex flex-col items-center">
-        <div className="w-12 h-1.5 bg-teal-600/20 rounded-full mb-3 overflow-hidden">
-          <div className="h-full bg-teal-600 animate-pulse w-1/2"></div>
-        </div>
-        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">인체 시각화 인터랙티브 모델</p>
-        <p className="text-[10px] text-slate-300 mt-1 italic">장기에 마우스를 올려 상세 정보를 확인하세요</p>
-      </div>
-    </div>
+      {/* ===== 복부 (Abdomen) - 기존 췌장 위치로 이동 ===== */}
+      <g {...bind('abdomen')} filter={getFilter('abdomen')}>
+        <ellipse cx="150" cy="255" rx="38" ry="32" fill={getOrganColor('abdomen')} opacity="0.32" stroke={getOrganColor('abdomen')} strokeWidth="2" strokeDasharray="4,3"/>
+        <circle cx="150" cy="255" r="16" fill={getOrganColor('abdomen')} opacity="0.65"/>
+        <title>복부 (Abdomen)</title>
+      </g>
+    </svg>
   );
 };
 

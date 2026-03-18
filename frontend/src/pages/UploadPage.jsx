@@ -28,6 +28,7 @@ export default function UploadPage() {
     try {
       if (file && !analysisDone) {
         // Step 1: AI 분석(OCR)
+        console.log('🚀 Step 1: AI 분석 시작...');
         const formData = new FormData();
         formData.append('reportFile', file);
         formData.append('year', year);
@@ -35,6 +36,8 @@ export default function UploadPage() {
         const res = await api.post('/reports/analyze', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
+
+        console.log('📊 분석 결과:', res.data);
 
         if (res.data.success) {
           const extracted = res.data.data.healthRecord;
@@ -54,23 +57,44 @@ export default function UploadPage() {
           });
           setAiReport(res.data.data.aiReport);
           setAnalysisDone(true);
-          // 알림 대신 UI에 자연스럽게 표시
+          console.log('✅ AI 분석 완료! 이제 "최종 데이터 확인 및 저장" 버튼을 클릭하세요.');
+        } else {
+          throw new Error(res.data.message || 'AI 분석 실패');
         }
       } else {
         // Step 2: 데이터 최종 저장
+        console.log('🚀 Step 2: 데이터 저장 시작...');
         const payload = {
           year,
           healthRecord: manualData,
           aiReport: aiReport
         };
+        console.log('📤 전송 데이터:', payload);
+        
         const res = await api.post('/reports/save', payload);
+        
+        console.log('💾 저장 응답:', res.data);
+        
         if (res.data.success) {
+          console.log('✅ 저장 완료! MyPage로 이동 중...');
           navigate('/mypage');
+        } else {
+          throw new Error(res.data.message || '데이터 저장 실패');
         }
       }
     } catch (err) {
-      console.error('Upload failed:', err);
-      alert(err.response?.data?.message || '처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+      console.error('❌ 오류 상세:', err);
+      
+      // 토큰 관련 에러 감지
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        const errorMsg = '세션이 만료되었습니다. 다시 로그인해주세요.';
+        alert(`[인증 오류] ${errorMsg}`);
+        // 로그인 페이지로 이동
+        window.location.href = '/login';
+      } else {
+        const errorMsg = err.response?.data?.message || err.message || '처리 중 오류가 발생했습니다. 다시 시도해주세요.';
+        alert(`[오류] ${errorMsg}`);
+      }
     } finally {
       setUploading(false);
     }
@@ -167,14 +191,42 @@ export default function UploadPage() {
                   <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-600" value={manualData.waist} onChange={(e) => setManualData({...manualData, waist: e.target.value})} placeholder="예: 85" />
                 </div>
                 <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">수축기 혈압 (mmHg)</label>
+                  <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-600" value={manualData.bpSys} onChange={(e) => setManualData({...manualData, bpSys: e.target.value})} placeholder="예: 120" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">이완기 혈압 (mmHg)</label>
+                  <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-600" value={manualData.bpDia} onChange={(e) => setManualData({...manualData, bpDia: e.target.value})} placeholder="예: 80" />
+                </div>
+                <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">공복 혈당</label>
                   <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-600" value={manualData.glucose} onChange={(e) => setManualData({...manualData, glucose: e.target.value})} placeholder="예: 95" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">중성 지방</label>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">중성 지방 (mg/dL)</label>
                   <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-600" value={manualData.tg} onChange={(e) => setManualData({...manualData, tg: e.target.value})} placeholder="예: 140" />
                 </div>
-                {/* 추후 다른 지표(혈압 등)도 추가/확장 가능 */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">HDL 콜레스테롤 (mg/dL)</label>
+                  <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-600" value={manualData.hdl} onChange={(e) => setManualData({...manualData, hdl: e.target.value})} placeholder="예: 50" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">LDL 콜레스테롤 (mg/dL)</label>
+                  <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-600" value={manualData.ldl} onChange={(e) => setManualData({...manualData, ldl: e.target.value})} placeholder="예: 130" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">AST (U/L)</label>
+                  <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-600" value={manualData.ast} onChange={(e) => setManualData({...manualData, ast: e.target.value})} placeholder="예: 30" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">ALT (U/L)</label>
+                  <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-600" value={manualData.alt} onChange={(e) => setManualData({...manualData, alt: e.target.value})} placeholder="예: 30" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">감마 GTP (U/L)</label>
+                  <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-600" value={manualData.gammaGtp} onChange={(e) => setManualData({...manualData, gammaGtp: e.target.value})} placeholder="예: 40" />
+                </div>
+                {/* 추후 BMI 자동 계산 기능 추가 가능 */}
               </div>
 
               <div className="pt-2">

@@ -147,18 +147,27 @@ exports.saveReport = async (req, res) => {
 
         return res.json({ success: true, message: '건강검진 데이터가 저장되었습니다.' });
     } catch (err) {
-        console.error(err);
-        return res.status(500).json({ success: false, message: '데이터 저장 중 오류가 발생했습니다.' });
+        console.error('❌ saveReport 에러:', err);
+        return res.status(500).json({ 
+            success: false, 
+            message: `데이터 저장 중 오류: ${err.message}`,
+            error: err.message 
+        });
     }
 };
 
 exports.getYears = async (req, res) => {
     try {
+        // [Portfolio Note] 요청 인스턴스의 유저 식별 로그
+        // console.log(`[BACKEND DEBUG] Fetching years for User ID: ${req.user.id}`);
         const [rows] = await pool.query(
             'SELECT DISTINCT exam_year FROM health_data WHERE user_id = ? ORDER BY exam_year DESC',
             [req.user.id]
         );
         const availableYears = rows.map(r => r.exam_year);
+        // [Portfolio Note] DB 조회 결과값 정합성 디버깅
+        // console.log(`[BACKEND DEBUG] Found years: [${availableYears.join(', ')}]`);
+        
         return res.json({
             success: true,
             data: {
@@ -167,7 +176,7 @@ exports.getYears = async (req, res) => {
             }
         });
     } catch (err) {
-        console.error(err);
+        console.error('[BACKEND ERROR] getYears:', err);
         return res.status(500).json({ success: false, message: '연도 조회 중 오류가 발생했습니다.' });
     }
 };
@@ -177,16 +186,23 @@ exports.getHealthReport = async (req, res) => {
     if (!year) return res.status(400).json({ success: false, message: '연도를 지정해주세요.' });
 
     try {
+        // [Portfolio Note] 특정 연도별 리포트 요청 유효성 확인
+        // console.log(`[BACKEND DEBUG] Fetching detailed report for User ID: ${req.user.id}, Year: ${year}`);
         const [hdRows] = await pool.query(
             'SELECT * FROM health_data WHERE user_id = ? AND exam_year = ?',
             [req.user.id, year]
         );
+        // [Portfolio Note] 건강 데이터 레코드 존재 여부 체크
+        // console.log(`[BACKEND DEBUG] Health Record found: ${hdRows.length > 0 ? 'Yes' : 'No'}`);
+
         if (hdRows.length === 0) return res.status(404).json({ success: false, message: '해당 연도의 데이터가 없습니다.' });
 
         const [arRows] = await pool.query(
             'SELECT * FROM ai_reports WHERE user_id = ? AND exam_year = ?',
             [req.user.id, year]
         );
+        // [Portfolio Note] AI 분석 리포트 연동 여부 확인
+        // console.log(`[BACKEND DEBUG] AI Report found: ${arRows.length > 0 ? 'Yes' : 'No'}`);
 
         return res.json({
             success: true,
@@ -194,12 +210,19 @@ exports.getHealthReport = async (req, res) => {
                 healthRecord: hdRows[0],
                 aiReport: arRows[0] ? {
                     ...arRows[0],
-                    riskOverview: JSON.parse(arRows[0].risk_overview || '[]')
+                    riskOverview: (() => {
+                        try {
+                            return JSON.parse(arRows[0].risk_overview || '[]');
+                        } catch (e) {
+                            console.error('[BACKEND ERROR] JSON Parse Error for risk_overview:', arRows[0].risk_overview);
+                            return [];
+                        }
+                    })()
                 } : null
             }
         });
     } catch (err) {
-        console.error(err);
+        console.error('[BACKEND ERROR] getHealthReport:', err);
         return res.status(500).json({ success: false, message: '데이터 조회 중 오류가 발생했습니다.' });
     }
 };

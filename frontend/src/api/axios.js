@@ -64,7 +64,8 @@ api.interceptors.response.use(
 
             try {
                 // 백엔드의 /auth/refresh 엔드포인트 호출 (쿠키 사용)
-                const res = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, { withCredentials: true });
+                // axios 대신 api 인스턴스 사용 (withCredentials 보장)
+                const res = await api.post('/auth/refresh', {});
                 
                 if (res.data.success) {
                     const newToken = res.data.accessToken;

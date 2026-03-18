@@ -1,25 +1,60 @@
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const axios = require('axios');
 const fs = require('fs');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+/**
+ * API 키 분산 관리 시스템
+ * - 환경변수에서 쉼표로 구분된 여러 Gemini API 키를 읽음
+ * - 매 요청마다 다음 API 키로 순환 전환 (SDK 및 REST API 모두)
+ * - 모델: gemini-2.5-flash
+ */
 
-// Helper for direct REST call as requested by USER
-async function callGeminiREST(message, history = [], systemInstruction = "") {
-    const URL = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-    
-    // Construct contents with system instruction if provided
-    const contents = history.map(h => ({
-        role: h.role === 'user' ? 'user' : 'model',
-        parts: [{ text: String(h.content || h.message || '') }]
-    }));
+// 환경변수에서 API 키 배열 파싱
+const apiKeysString = process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY;
+const apiKeys = apiKeysString ? apiKeysString.split(',').map(key => key.trim()).filter(key => key.length > 0) : [];
 
-    // Add current user message
-    contents.push({
-        role: "user",
-        parts: [{ text: message }]
-    });
+if (apiKeys.length === 0) {
+    console.warn('⚠️ GEMINI_API_KEYS 또는 GEMINI_API_KEY가 설정되어 있지 않습니다.');
+} else {
+    console.log(`✅ Gemini API 키 ${apiKeys.length}개 로드됨 (토큰 할당량 분산: 45,000 TPM)`);
+}
+
+let currentKeyIndex = 0;
+
+/**
+ * 다음 API 키로 SDK 클라이언트 반환 (순환)
+ */
+function getNextGenAI() {
+    if (apiKeys.length === 0) throw new Error('Gemini API key is not configured.');
+    const apiKey = apiKeys[currentKeyIndex];
+    const keyPreview = apiKey.substring(0, 10) + '...' + apiKey.substring(apiKey.length - 5);
+    console.log(`🔄 SDK API 키 사용: ${keyPreview} (${currentKeyIndex + 1}/${apiKeys.length})`);
+    currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
+    return new GoogleGenerativeAI(apiKey);
+}
+
+/**
+ * REST API를 사용한 Gemini 호출
+ */
+async function callGeminiREST(message, history = [], systemInstruction = '') {
+    if (apiKeys.length === 0) throw new Error('Gemini API key is not configured.');
+    const apiKey = apiKeys[currentKeyIndex];
+    const keyPreview = apiKey.substring(0, 10) + '...' + apiKey.substring(apiKey.length - 5);
+    console.log(`🔄 REST API 키 사용: ${keyPreview} (${currentKeyIndex + 1}/${apiKeys.length})`);
+    currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
+
+    const URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+    const contents = [
+        ...history.map(h => ({
+            role: h.role === 'user' ? 'user' : 'model',
+            parts: [{ text: String(h.content || h.message || '') }]
+        })),
+        {
+            role: 'user',
+            parts: [{ text: message }]
+        }
+    ];
 
     const body = {
         contents,
@@ -37,21 +72,21 @@ async function callGeminiREST(message, history = [], systemInstruction = "") {
     }
 }
 
-// Helper to handle both file path (local) and buffer (serverless)
+// 파일 경로(로컬) 또는 버퍼(서버리스) 모두 처리
 function fileToGenerativePart(path, buffer, mimeType) {
-  const data = path ? fs.readFileSync(path) : buffer;
-  return {
-    inlineData: {
-      data: Buffer.from(data).toString("base64"),
-      mimeType
-    },
-  };
+    const data = path ? fs.readFileSync(path) : buffer;
+    return {
+        inlineData: {
+            data: Buffer.from(data).toString("base64"),
+            mimeType
+        },
+    };
 }
 
 exports.analyzeHealthReport = async (fileData, mimeType, userInfo) => {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    
-    // fileData can be a path (string) or a buffer
+    const genAI = getNextGenAI();
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
     const isPath = typeof fileData === 'string';
     const filePath = isPath ? fileData : null;
     const fileBuffer = isPath ? null : fileData;
@@ -111,12 +146,10 @@ exports.analyzeHealthReport = async (fileData, mimeType, userInfo) => {
 `;
 
     const imagePart = fileToGenerativePart(filePath, fileBuffer, mimeType);
-
     const result = await model.generateContent([prompt, imagePart]);
     const response = await result.response;
     const text = response.text();
-    
-    // Extract JSON from response if it's wrapped in code blocks
+
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
         return JSON.parse(jsonMatch[0]);
@@ -125,7 +158,6 @@ exports.analyzeHealthReport = async (fileData, mimeType, userInfo) => {
 };
 
 exports.chatHealthConsultation = async (history, message, healthContext) => {
-    // 1. Prepare Enhanced System Instruction
     const systemInstruction = `너는 'CareLink'의 전문 건강 상담 AI 비서다. 
 사용자의 건강검진 데이터를 기반으로 정밀하고 따뜻한 의학적 상담을 제공하라.
 
@@ -149,6 +181,7 @@ exports.chatHealthConsultation = async (history, message, healthContext) => {
     for (const modelName of modelNames) {
         try {
             console.log(`Trying Gemini model: ${modelName}`);
+            const genAI = getNextGenAI();
             const model = genAI.getGenerativeModel({ 
                 model: modelName,
                 systemInstruction: systemInstruction 
@@ -175,11 +208,18 @@ exports.chatHealthConsultation = async (history, message, healthContext) => {
         }
     }
 
-    throw new Error("모든 제미나이 모델 호출에 실패했습니다. API 키 또는 할당량을 확인해주세요.");
+    try {
+        console.log("Trying REST API fallback...");
+        return await callGeminiREST(message, history, systemInstruction);
+    } catch (err) {
+        console.error("All Gemini methods failed.");
+        throw new Error("모든 제미나이 모델 호출에 실패했습니다. API 키 또는 할당량을 확인해주세요.");
+    }
 };
 
 exports.generateActionPlan = async (healthContext) => {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const genAI = getNextGenAI();
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
 사용자의 건강검진 데이터를 기반으로 다음 일주일 동안 실천할 구체적인 '액션 플랜(Action Plan)' 3가지를 생성하라.
