@@ -148,6 +148,28 @@ app.get('/.netlify/functions/api/debug-db', async (req, res) => {
     }
 });
 
+// Request logger 및 에러 핸들러
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+});
+
+// [최적화] 전역 에러 핸들러 (JSON 응답 보장)
+// 대표님, 업로드 파일 형식 오류 등 실시간으로 발생하는 예외를 사용자에게 친절하게 전달하기 위해 추가했습니다.
+app.use((err, req, res, next) => {
+    console.error('--- Global Error Handler ---');
+    console.error('Error Message:', err.message);
+    
+    // Multer 파일 필터 에러 등은 400 Bad Request로 처리
+    const status = err.message.includes('지원하지 않는 파일 형식') ? 400 : 500;
+    
+    res.status(status).json({
+        success: false,
+        message: err.message || '서버 내부 오류가 발생했습니다.',
+        error: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+});
+
 // Export app for serverless functions
 module.exports = app;
 
@@ -162,9 +184,3 @@ if (require.main === module) {
         console.log(`====================================================`);
     });
 }
-
-// Request logger
-app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    next();
-});

@@ -36,7 +36,7 @@ function getNextGenAI() {
  */
 async function callGeminiREST(message, history = [], systemInstruction = "") {
     const apiKey = getNextKey();
-    const modelName = "gemini-2.5-flash"; // 또는 사용 중인 최신 모델명
+    const modelName = "gemini-1.5-flash"; // 또는 사용 중인 최신 모델명
     const URL = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
     const contents = [
@@ -81,7 +81,7 @@ function fileToGenerativePart(path, buffer, mimeType) {
 
 exports.analyzeHealthReport = async (fileData, mimeType, userInfo, lang = 'ko') => {
     const genAI = getNextGenAI();
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     const isPath = typeof fileData === 'string';
     const filePath = isPath ? fileData : null;
@@ -242,7 +242,7 @@ exports.chatHealthConsultation = async (history, message, healthContext) => {
     } catch (error) {
         console.error("REST API Error:", error.message);
         const genAI = getNextGenAI();
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const chat = model.startChat({
             history: history.map(h => ({
                 role: h.role === 'user' ? 'user' : 'model',
@@ -259,7 +259,7 @@ exports.chatHealthConsultation = async (history, message, healthContext) => {
 
 exports.generateActionPlan = async (healthContext) => {
     const genAI = getNextGenAI();
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
 사용자의 건강검진 데이터를 기반으로 다음 일주일 동안 실천할 구체적인 '액션 플랜(Action Plan)' 3가지를 생성하라.
