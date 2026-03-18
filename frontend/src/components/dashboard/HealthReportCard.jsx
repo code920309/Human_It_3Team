@@ -3,9 +3,10 @@ import { motion } from 'framer-motion';
 import { FileText, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const HealthReportCard = () => {
+const HealthReportCard = ({ selectedYear }) => {
+  const reportLink = selectedYear ? `/report?year=${selectedYear}` : '/report';
   return (
-    <Link to="/report" className="block h-full">
+    <Link to={reportLink} className="block h-full">
       <motion.div 
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}

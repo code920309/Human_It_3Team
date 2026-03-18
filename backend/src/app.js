@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const dotenv = require('dotenv');
 
 dotenv.config();
@@ -11,9 +12,23 @@ const authRoutes = require('./routes/authRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const chatbotRoutes = require('./routes/chatbotRoutes');
 const actionPlanRoutes = require('./routes/actionPlanRoutes');
+const reviewRoutes = require('./routes/reviewRoutes'); //리뷰 담당 라우터 불러오기
 
-app.use(cors());
-app.use(express.json({ type: '*/*' })); // Try parsing everything as JSON
+// [보안] CORS 설정 - credentials 허용
+app.use(cors({
+    origin: true, // 로컬 개발 및 배포 환경 대응
+    credentials: true
+}));
+
+app.use(cookieParser());
+// express.json 및 express.urlencoded
+// 단, multipart/form-data 는 multer 에 맡기기 위해 예외 처리
+app.use((req, res, next) => {
+    if (req.headers['content-type'] && req.headers['content-type'].startsWith('multipart/form-data')) {
+        return next();
+    }
+    express.json({ type: '*/*' })(req, res, next);
+});
 app.use(express.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
@@ -73,6 +88,7 @@ apiRouter.use('/auth', authRoutes);
 apiRouter.use('/reports', reportRoutes);
 apiRouter.use('/chatbot', chatbotRoutes);
 apiRouter.use('/action-plans', actionPlanRoutes);
+apiRouter.use('/reviews', reviewRoutes); // '/api/reviews' 경로가 호출되면 신규 라우터로 연결
 
 // Mount the API router at both common prefixes
 app.use('/api', apiRouter);

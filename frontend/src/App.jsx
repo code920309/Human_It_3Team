@@ -11,6 +11,7 @@ import HealthReport from './pages/HealthReport';
 import ProfileEdit from './pages/ProfileEdit';
 import ProtectedRoute from './components/ProtectedRoute';
 import Policy from "./pages/Policy";
+import ChatWidget from './components/ChatWidget';
 
 function App() {
   return (
@@ -53,6 +54,7 @@ function App() {
           <Route path="/policy/terms" element={<Policy />} />
           <Route path="/policy/privacy" element={<Policy />} />
         </Routes>
+        <ChatWidget />
       </Router>
     </AuthProvider>
   );

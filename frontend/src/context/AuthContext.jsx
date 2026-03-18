@@ -3,6 +3,10 @@ import api from '../api/axios';
 
 const AuthContext = createContext();
 
+/**
+ * 전역 인증 관리 Provider
+ * [충돌해결] 세션 유지(keepLoggedIn) 기능과 서버 측 로그아웃 호출을 통합하여 최적화했습니다.
+ */
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -17,6 +21,9 @@ export const AuthProvider = ({ children }) => {
         }
     }, []);
 
+    /**
+     * 페이지 새로고침 시 Access Token 유효성 검사 및 유저 정보 복구
+     */
     const checkAuth = async () => {
         try {
             const res = await api.get('/auth/me');
@@ -24,8 +31,8 @@ export const AuthProvider = ({ children }) => {
                 setUser(res.data.data);
             }
         } catch (err) {
-            console.error('Auth verification failed', err);
-            /* [수정] 양쪽 스토리지의 토큰 모두 삭제 (에러 시 초기화) */
+            console.error('❌ 인증 세션 복구 실패:', err.message);
+            /* [수정] 인증 실패 시 모든 저장소의 토큰 초기화 */
             localStorage.removeItem('carelink_token');
             sessionStorage.removeItem('carelink_token');
         } finally {
@@ -33,23 +40,37 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    /**
+     * 로그인 성공 처리
+     * [충돌해결] keepLoggedIn 옵션에 따라 토큰 저장 위치를 분기 처리합니다.
+     */
     const login = (token, userData, keepLoggedIn = false) => {
-        /* [수정] 로그인 유지 체크 여부에 따라 저장 위치 분리 */
         if (keepLoggedIn) {
             localStorage.setItem('carelink_token', token);
-            sessionStorage.removeItem('carelink_token'); // 확실한 정리를 위해
+            sessionStorage.removeItem('carelink_token');
         } else {
             sessionStorage.setItem('carelink_token', token);
-            localStorage.removeItem('carelink_token');   // 확실한 정리를 위해
+            localStorage.removeItem('carelink_token');
         }
         setUser(userData);
     };
 
-    const logout = () => {
-        /* [수정] 로그아웃 시 로그인 유지/세션 토큰 모두 삭제 */
-        localStorage.removeItem('carelink_token');
-        sessionStorage.removeItem('carelink_token');
-        setUser(null);
+    /**
+     * 보안 로그아웃 처리
+     * [충돌해결] 서버 세션 파괴 API를 호출하면서 클라이언트의 모든 토큰을 삭제합니다.
+     */
+    const logout = async () => {
+        try {
+            // 서버 측 세션/쿠키 파기 시도 (선택 사항이지만 보안상 권장)
+            await api.post('/auth/logout');
+        } catch (e) {
+            console.error('로그아웃 통신 실패:', e);
+        } finally {
+            /* 모든 스토리지에서 인증 토큰 제거 */
+            localStorage.removeItem('carelink_token');
+            sessionStorage.removeItem('carelink_token');
+            setUser(null);
+        }
     };
 
     return (

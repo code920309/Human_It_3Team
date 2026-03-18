@@ -7,13 +7,12 @@ import {
   History, Settings, RefreshCcw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import ReactMarkdown from 'react-markdown';
 import api from '../api/axios';
 
-// Initialize Gemini - Using VITE_ prefix for Vite environment
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+const ai = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 export default function ChatbotPage() {
   const [messages, setMessages] = useState([
@@ -88,8 +87,9 @@ export default function ChatbotPage() {
     setIsLoading(true);
 
     try {
-      // Use Backend API for persistent chat and context awareness
+      console.log("Attempting backend API call...");
       const response = await api.post('/chatbot/message', { message: messageText });
+      console.log("Backend response received:", response.data);
       
       if (response.data.success) {
         const assistantMessage = {
@@ -103,18 +103,38 @@ export default function ChatbotPage() {
         throw new Error(response.data.message || "Failed to get response");
       }
     } catch (error) {
-      console.error("Chat Error:", error);
+      console.error("Chat Error (Backend):", error.message);
       
-      // Fallback to Frontend Gemini if Backend fails
       try {
-        const chat = ai.chats.create({
-          model: "gemini-1.5-flash",
-          config: {
-            systemInstruction: "당신은 CareLink의 전문 건강 상담 AI 비서입니다. 사용자의 건강 상담을 돕고, 따뜻하게 격려하세요.",
+        console.log("Attempting Frontend Gemini fallback...");
+        console.log("API Key loaded (first 5):", GEMINI_API_KEY ? GEMINI_API_KEY.substring(0, 5) : "MISSING");
+        
+        if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is missing in frontend env");
+
+        const genModel = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const chat = genModel.startChat({
+          history: messages
+            .filter(m => m.role === 'user' || m.role === 'assistant')
+            .map(m => ({
+              role: m.role === 'assistant' ? 'model' : 'user',
+              parts: [{ text: m.content }]
+            }))
+            .filter((m, i, arr) => {
+              // Gemini requires the first message in history to be from 'user'
+              // Or we can just slice from the first 'user' occurrence
+              const firstUserIndex = arr.findIndex(msg => msg.role === 'user');
+              if (firstUserIndex === -1) return false;
+              return i >= firstUserIndex;
+            })
+            .slice(-10),
+          generationConfig: {
+            maxOutputTokens: 1000,
           },
         });
-        const response = await chat.sendMessage({ message: messageText });
-        const text = response.text || "죄송합니다. 응답을 생성하는 중에 문제가 발생했습니다.";
+
+        const result = await chat.sendMessage(messageText);
+        const text = result.response.text();
+        console.log("Frontend Gemini response received");
         
         setMessages(prev => [...prev, {
           id: `${Date.now()}-ai-fallback`,
@@ -123,6 +143,7 @@ export default function ChatbotPage() {
           timestamp: new Date(),
         }]);
       } catch (fallbackError) {
+        console.error("Fallback Error (Frontend Gemini):", fallbackError.message);
         setMessages(prev => [...prev, {
           id: `${Date.now()}-error`,
           role: 'assistant',
@@ -247,7 +268,7 @@ export default function ChatbotPage() {
   }
 
   return (
-    <div className="h-screen bg-[#F8FAFC] flex flex-col overflow-hidden font-sans">
+    <div className="h-[calc(100dvh-2cm)] bg-[#F8FAFC] flex flex-col overflow-hidden font-sans my-auto">
       {/* Premium Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 px-4 py-3 shrink-0 shadow-sm">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
@@ -300,7 +321,7 @@ export default function ChatbotPage() {
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto bg-grid-slate-100/50 p-4 md:p-6"
       >
-        <div className="max-w-4xl mx-auto space-y-8 pb-32">
+        <div className="max-w-4xl mx-auto space-y-8 pb-10">
           {/* Welcome Message Extra Info */}
           <div className="text-center py-6">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-2xl shadow-sm border border-slate-100 text-[13px] text-slate-500 font-medium italic">
@@ -374,7 +395,7 @@ export default function ChatbotPage() {
       </main>
 
       {/* Input Area Wrapper */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-[#F8FAFC] via-[#F8FAFC] to-transparent pt-10 pb-6 z-40">
+      <div className="bg-white/80 backdrop-blur-md border-t border-slate-200 pt-6 pb-8 shrink-0 z-40">
         <div className="max-w-4xl mx-auto px-4">
           
           <AnimatePresence>

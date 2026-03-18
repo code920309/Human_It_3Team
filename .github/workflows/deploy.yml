@@ -1,0 +1,65 @@
+name: CareLink CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  frontend-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: './frontend/package-lock.json'
+          
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm install
+          
+      - name: Build Frontend
+        run: |
+          cd frontend
+          npm run build
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+
+  backend-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: './backend/package-lock.json'
+          
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          npm install
+          
+      # 추후 백엔드 테스트 코드 추가 시 활성화
+      # - name: Run Backend Tests
+      #   run: |
+      #     cd backend
+      #     npm test
+
+  # 실제 배포 단계는 사용자의 서버 환경(AWS, Vercel 등)에 맞춰 설정 필요
+  # deploy:
+  #   needs: [frontend-build, backend-check]
+  #   if: github.ref == 'refs/heads/main'
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Deploy to Server
+  #       run: echo "배포 로직 시작"
+
