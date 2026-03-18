@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import api from '../api/axios';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Pagination, Navigation } from 'swiper/modules';
 import 'swiper/css';
@@ -22,9 +23,8 @@ export default function HomePage() {
       return;
     }
     try {
-      // Use the configured api instance for deployment-ready calls
       const response = await api.post('/contacts', { email, message });
-      if (response.data.success) {
+      if (response.data.success || response.status === 200 || response.status === 201) {
         alert('소중한 의견이 전달되었습니다!');
         setEmail('');
         setMessage('');
