@@ -42,9 +42,7 @@ const query = async (sql, params = []) => {
 
         // 2. Handle placeholders (? -> $1, $2...)
         let i = 1;
-        while (pgSql.includes('?')) {
-            pgSql = pgSql.replace('?', `$${i++}`);
-        }
+        pgSql = pgSql.replace(/\?/g, () => `$${i++}`);
 
         // 3. Automated RETURNING clause for INSERT
         pgSql = pgSql.trim();
