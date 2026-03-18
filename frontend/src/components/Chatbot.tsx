@@ -60,7 +60,7 @@ export default function Chatbot() {
 
     try {
       const chat = ai.chats.create({
-        model: "gemini-3-flash-preview",
+        model: "gemini-2.5-flash",
         config: {
           systemInstruction: `당신은 'CareLink'의 전문 건강 상담 AI 비서입니다. 
           사용자의 건강검진 결과를 분석하고 맞춤형 건강 가이드(식단, 운동, 생활 습관)를 제공하는 것이 주 목적입니다.
@@ -169,7 +169,7 @@ export default function Chatbot() {
       }
 
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-1.5-flash",
         contents: { parts },
         config: {
           systemInstruction: `당신은 'CareLink'의 전문 건강 상담 AI 비서입니다. 
@@ -275,7 +275,7 @@ export default function Chatbot() {
       <button
         id="chatbot-toggle-btn"
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed top-6 right-6 z-50 p-4 bg-emerald-600 text-white rounded-full shadow-lg hover:bg-emerald-700 transition-all duration-300 flex items-center justify-center group"
+        className="fixed bottom-6 right-6 z-50 p-4 bg-emerald-600 text-white rounded-full shadow-lg hover:bg-emerald-700 transition-all duration-300 flex items-center justify-center group"
       >
         {isOpen ? <X size={24} /> : <MessageCircle size={24} />}
         {!isOpen && (

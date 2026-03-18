@@ -144,10 +144,17 @@ export default function ChatbotPage() {
         }]);
       } catch (fallbackError) {
         console.error("Fallback Error (Frontend Gemini):", fallbackError.message);
+        const errorMessage = fallbackError.message || "";
+        let userFriendlyMsg = "현재 AI 서버와의 연결이 원활하지 않습니다. 잠시 후 다시 시도해주세요.";
+        
+        if (errorMessage.includes("403") || errorMessage.includes("PERMISSION_DENIED") || errorMessage.includes("API key not valid")) {
+           userFriendlyMsg = "제미나이 연결은 구축되었으나, 현재 사용 중인 API 키가 구글(Google) 서버에서 거절(403 Forbidden) 상태입니다. 정상적인 API 키로 변경해주시면 제미나이가 대답합니다!";
+        }
+
         setMessages(prev => [...prev, {
           id: `${Date.now()}-error`,
           role: 'assistant',
-          content: "연결에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.",
+          content: userFriendlyMsg,
           timestamp: new Date(),
           isError: true
         }]);

@@ -13,6 +13,24 @@ const reportRoutes = require('./routes/reportRoutes');
 const chatbotRoutes = require('./routes/chatbotRoutes');
 const actionPlanRoutes = require('./routes/actionPlanRoutes');
 
+const fs = require('fs');
+const path = require('path');
+const logDir = path.join(__dirname, '../logs');
+if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
+
+app.use((req, res, next) => {
+    const log = `[${new Date().toISOString()}] ${req.method} ${req.url}\n`;
+    fs.appendFileSync(path.join(logDir, 'access.log'), log);
+    next();
+});
+
+// Mock Error Logger
+app.use((err, req, res, next) => {
+    const log = `[${new Date().toISOString()}] ERROR: ${err.message}\n${err.stack}\n`;
+    fs.appendFileSync(path.join(logDir, 'error.log'), log);
+    next(err);
+});
+
 // [보안] CORS 설정 - credentials 허용
 app.use(cors({
     origin: true, // 로컬 개발 및 배포 환경 대응
@@ -140,3 +158,9 @@ if (require.main === module) {
         console.log(`Server is running on port ${PORT}`);
     });
 }
+
+// Request logger
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+});

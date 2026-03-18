@@ -7,7 +7,7 @@ const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 // Helper for direct REST call as requested by USER
 async function callGeminiREST(message, history = [], systemInstruction = "") {
-    const URL = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    const URL = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
     
     // Construct contents with system instruction if provided
     const contents = history.map(h => ({
@@ -49,7 +49,7 @@ function fileToGenerativePart(path, buffer, mimeType) {
 }
 
 exports.analyzeHealthReport = async (fileData, mimeType, userInfo) => {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     // fileData can be a path (string) or a buffer
     const isPath = typeof fileData === 'string';
@@ -125,49 +125,61 @@ exports.analyzeHealthReport = async (fileData, mimeType, userInfo) => {
 };
 
 exports.chatHealthConsultation = async (history, message, healthContext) => {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    // 1. Prepare Enhanced System Instruction
+    const systemInstruction = `너는 'CareLink'의 전문 건강 상담 AI 비서다. 
+사용자의 건강검진 데이터를 기반으로 정밀하고 따뜻한 의학적 상담을 제공하라.
 
-    const contextPrompt = `
-너는 CareLink의 전문 건강 상담 AI다. 
-사용자의 건강검진 데이터를 기반으로 친절하고 전문적인 의학적 조언을 제공하라.
-
-사용자의 현재 건강 상태 (최신 데이터):
-- 허리둘레: ${healthContext.waist}cm
-- 혈압: ${healthContext.blood_pressure_s}/${healthContext.blood_pressure_d}mmHg
-- 공복혈당: ${healthContext.fasting_glucose}mg/dL
+사용자 건강 프로필:
+- 혈압: ${healthContext.blood_pressure_s}/${healthContext.blood_pressure_d} mmHg
+- 혈당: ${healthContext.fasting_glucose} mg/dL
 - 콜레스테롤: HDL ${healthContext.hdl}, LDL ${healthContext.ldl}, TG ${healthContext.tg}
-- 간 수치: AST ${healthContext.ast}, ALT ${healthContext.alt}, γ-GTP ${healthContext.gamma_gtp}
+- 간 수치: AST ${healthContext.ast}, ALT ${healthContext.alt}
 - BMI: ${healthContext.bmi}
-- 종합 점수: ${healthContext.health_score}점
+- 종합 건강 점수: ${healthContext.health_score}점
 
-상담 원칙:
-1. 항상 따뜻하고 격려하는 말투를 사용하라.
-2. 사용자의 구체적인 수치를 언급하며 조언하라.
-3. 심각한 수치가 있다면 반드시 병원 방문을 권고하라.
-4. 답변은 한국어로 하라.
-`;
+상담 규칙:
+1. AI답게 논리적이고 풍부한 정보를 제공하라.
+2. 사용자의 수치를 전문가처럼 분석하여 정상 범위와 비교 설명하라.
+3. 구체적인 생활 습관 개선(식단, 운동)을 실천 가능하게 제안하라.
+4. "본 상담은 참고용이며, 정확한 진단은 전문의와 상의하십시오" 문구를 포함하라.
+5. 성격은 차분하고 지적이며 친절하게 유지하라.`;
 
-    try {
-        return await callGeminiREST(message, history, contextPrompt);
-    } catch (error) {
-        console.error("REST Fallback Error:", error);
-        // SDK Fallback as last resort
-        const chat = model.startChat({
-            history: history.map(h => ({
+    const modelNames = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"];
+    
+    for (const modelName of modelNames) {
+        try {
+            console.log(`Trying Gemini model: ${modelName}`);
+            const model = genAI.getGenerativeModel({ 
+                model: modelName,
+                systemInstruction: systemInstruction 
+            });
+
+            // Format history for SDK
+            const sdkHistory = history.map(h => ({
                 role: h.role === 'user' ? 'user' : 'model',
-                parts: [{ text: String(h.content || h.message || '') }]
-            })),
-            systemInstruction: contextPrompt
-        });
+                parts: [{ text: String(h.message || h.content || '') }]
+            }));
 
-        const result = await chat.sendMessage(message);
-        const response = await result.response;
-        return response.text();
+            const firstUserIdx = sdkHistory.findIndex(h => h.role === 'user');
+            const finalHistory = firstUserIdx !== -1 ? sdkHistory.slice(firstUserIdx) : [];
+
+            const chat = model.startChat({ history: finalHistory });
+            const result = await chat.sendMessage(message);
+            const response = await result.response;
+            const text = response.text();
+            
+            if (text) return text;
+        } catch (error) {
+            console.error(`Gemini Model ${modelName} failed:`, error.message);
+            // Continue to next model
+        }
     }
+
+    throw new Error("모든 제미나이 모델 호출에 실패했습니다. API 키 또는 할당량을 확인해주세요.");
 };
 
 exports.generateActionPlan = async (healthContext) => {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
 사용자의 건강검진 데이터를 기반으로 다음 일주일 동안 실천할 구체적인 '액션 플랜(Action Plan)' 3가지를 생성하라.
