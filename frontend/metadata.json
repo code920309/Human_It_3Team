@@ -1,0 +1,7 @@
+{
+  "name": "CareLink 최종",
+  "description": "AI-powered health analysis and personalized action plan chatbot.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

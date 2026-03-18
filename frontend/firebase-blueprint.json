@@ -1,0 +1,62 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System user information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] }
+      },
+      "required": ["uid", "email"]
+    },
+    "ChatHistory": {
+      "title": "Chat History",
+      "description": "History of chat messages between user and AI",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "role": { "type": "string", "enum": ["user", "assistant"] },
+              "content": { "type": "string" },
+              "timestamp": { "type": "string", "format": "date-time" }
+            }
+          }
+        },
+        "lastUpdated": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "messages"]
+    },
+    "HealthData": {
+      "title": "Health Data",
+      "description": "Parsed health checkup results",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "data": { "type": "object", "description": "JSON object containing health metrics" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "data"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "User profile documents"
+    },
+    "/chats/{chatId}": {
+      "schema": "ChatHistory",
+      "description": "Chat session documents"
+    },
+    "/health_data/{dataId}": {
+      "schema": "HealthData",
+      "description": "Health report analysis documents"
+    }
+  }
+}
