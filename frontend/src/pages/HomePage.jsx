@@ -22,15 +22,11 @@ export default function HomePage() {
       return;
     }
     try {
-      // 주의: 백엔드 서버 주소와 포트(예: 5000)는 팀 설정에 따라 다를 수 있습니다.
-      const response = await fetch('http://localhost:5000/api/contacts', { 
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, message })
-      });
-      if (response.ok) {
+      // Use the configured api instance for deployment-ready calls
+      const response = await api.post('/contacts', { email, message });
+      if (response.data.success) {
         alert('소중한 의견이 전달되었습니다!');
-        setEmail(''); // 입력창 비우기
+        setEmail('');
         setMessage('');
       } else {
         alert('전송에 실패했습니다. 다시 시도해주세요.');
