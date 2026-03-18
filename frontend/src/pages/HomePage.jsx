@@ -102,6 +102,7 @@ export default function HomePage() {
       return;
     }
     try {
+      /* [수정] 하드코딩된 localhost URL 대신 공통 axios 인스턴스(api)를 사용하여 배포 환경 대응 */
       const response = await api.post('/contacts', { email, message });
       if (response.data.success || response.status === 200 || response.status === 201) {
         alert('소중한 의견이 전달되었습니다!');

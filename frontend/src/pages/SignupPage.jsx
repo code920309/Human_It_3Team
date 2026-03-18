@@ -56,6 +56,15 @@ export default function SignupPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
+
+    // [수정] Supabase 설정(Letters and digits)에 맞춘 보안 검증
+    const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d).{10,}$/;
+    if (!passwordRegex.test(formData.password)) {
+      setError('비밀번호는 최소 10자이며 영문과 숫자를 모두 포함해야 합니다.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await api.post('/auth/signup', {
         email,
@@ -131,18 +140,20 @@ export default function SignupPage() {
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      {/* [수정] Supabase 설정에 맞춰 OTP 길이를 8자리로 변경 */}
                       <input
                         type="text"
-                        maxLength={6}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 focus:ring-2 focus:ring-teal-500 outline-none transition-all font-bold tracking-widest"
-                        placeholder="000000"
+                        maxLength={8}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 focus:ring-2 focus:ring-teal-500 outline-none transition-all font-bold tracking-widest text-center"
+                        placeholder="인증번호 8자리 숫자"
                         value={otp}
                         onChange={(e) => setOtp(e.target.value)}
                       />
                     </div>
+                    {/* [수집] 마스터의 Supabase 설정(Email OTP Length: 8)에 맞춰 8자리 필수 입력 적용 */}
                     <button
                       onClick={handleVerifyOtp}
-                      disabled={loading || otp.length < 6}
+                      disabled={loading || otp.length < 8}
                       className="bg-teal-600 hover:bg-teal-700 text-white px-6 rounded-2xl font-bold transition-all disabled:opacity-50"
                     >
                       확인
@@ -166,11 +177,12 @@ export default function SignupPage() {
               </div>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                {/* [수정] Supabase 비밀번호 정책(10자 이상, 복잡성)에 맞게 안내 문구 변경 */}
                 <input
                   type="password"
                   required
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 focus:ring-2 focus:ring-teal-500 outline-none transition-all"
-                  placeholder="비밀번호 (8자 이상)"
+                  placeholder="비밀번호 (10자 이상, 대/소문자, 숫자, 기호 포함)"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 />

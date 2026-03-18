@@ -32,17 +32,11 @@ export default function MyPage() {
         try {
             // 사용 가능한 검진 연도 목록 API 호출
             const yearsRes = await api.get('/reports/years');
-            // [Portfolio Note] 데이터 정합성 확인을 위한 초기 연도 데이터 수신 디버깅
-            // console.log('[DEBUG] Years API Response:', yearsRes.data);
-
             if (yearsRes.data.success) {
                 const years = yearsRes.data.data.availableYears;
                 setAvailableYears(years);
 
                 if (years.length > 0) {
-                    // [Portfolio Note] 연도 리스트 존재 여부 확인 로그
-                    // console.log('[DEBUG] Available Years found:', years);
-                    
                     // 최신 연도의 리포트 데이터를 우선적으로 호출
                     await fetchReport(years[0]);
                     setSelectedYear(years[0]);
@@ -53,9 +47,6 @@ export default function MyPage() {
                         score: 80 + Math.floor(Math.random() * 15)
                     })).reverse();
                     setHistory(mockHistory);
-                } else {
-                    // [Portfolio Note] 데이터가 없는 유저의 예외 처리 흐름 추적
-                    // console.log('[DEBUG] No available years found for this user.');
                 }
             }
         } catch (err) {
@@ -68,11 +59,7 @@ export default function MyPage() {
     // 특정 연도의 상세 건강 리포트 데이터를 호출하는 함수
     const fetchReport = async (year) => {
         try {
-            // [Portfolio Note] 연도 변경 시 트리거되는 리포트 페칭 추적
-            // console.log(`[DEBUG] Fetching report for year: ${year}`);
             const res = await api.get(`/reports/health?year=${year}`);
-            // [Portfolio Note] 최종 리포트 데이터 바인딩 확인
-            // console.log('[DEBUG] Health Report API Response:', res.data);
             if (res.data.success) {
                 setReportData(res.data.data);
             }
@@ -167,21 +154,10 @@ export default function MyPage() {
                             </p>
                         </motion.div>
 
-                        {/* 건강 점수 및 리포트 카드 섹션 */}
-                        <div className="h-[450px]">
-                            <HealthScoreCard
-                                score={reportData?.healthRecord?.health_score || 0}
-                                change={5}
-                                status="안정적"
-                            />
-                        </div>
-                        <div className="h-[450px]">
-                            <HealthReportCard selectedYear={selectedYear} />
-                        </div>
+                        {/* 그리드 레이아웃 (65:35) */}
                         <div className="grid grid-cols-1 lg:grid-cols-[65%_35%] gap-8">
-                            {/* 왼쪽 영역: 핵심 데이터 스트림 (65%) - 높이 1/3씩 3단 구성 */}
+                            {/* 왼쪽 영역: 65% */}
                             <div className="flex flex-col gap-8">
-                                {/* 1. 건강 점수 카드 */}
                                 <div className="h-[400px]">
                                     <HealthScoreCard
                                         score={reportData?.healthRecord?.health_score || 0}
@@ -189,17 +165,12 @@ export default function MyPage() {
                                         status="안정적"
                                     />
                                 </div>
-                                
-                                {/* 2. 건강 트렌드 차트 (왼쪽 65% - 더 넓은 폭 활용) */}
                                 <div className="h-[400px]">
                                     <HealthTrendChart history={history} />
                                 </div>
-
-                                {/* 5. 상세 수치 영역 (New ✨) */}
                                 <motion.div 
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: 0.2 }}
                                     className="h-[400px] bg-white p-8 rounded-3xl border border-orange-100 shadow-sm flex flex-col"
                                 >
                                     <div className="flex justify-between items-center mb-6">
@@ -207,7 +178,6 @@ export default function MyPage() {
                                         <span className="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1 rounded-full uppercase">Details</span>
                                     </div>
                                     <div className="flex-1 grid grid-cols-2 gap-4">
-                                        {/* 상세 수치 아이템들이 들어갈 공간입니다. */}
                                         <div className="bg-orange-50/50 rounded-2xl p-5 border border-orange-100/50 flex flex-col justify-center">
                                             <p className="text-xs font-bold text-slate-400 mb-1">혈압</p>
                                             <p className="text-2xl font-black text-slate-900">{reportData?.healthRecord?.blood_pressure_s}/{reportData?.healthRecord?.blood_pressure_d} <span className="text-sm font-medium text-slate-500">mmHg</span></p>
@@ -228,14 +198,11 @@ export default function MyPage() {
                                 </motion.div>
                             </div>
 
-                            {/* 오른쪽 영역: 보조 데이터 스트림 (35%) - 높이 1/2씩 2단 구성 */}
+                            {/* 오른쪽 영역: 35% */}
                             <div className="flex flex-col gap-8">
-                                {/* 3. 건강 리포트 카드 (오른쪽 35% - 요약 정보 정렬) */}
                                 <div className="h-[620px]">
-                                    <HealthReportCard />
+                                    <HealthReportCard selectedYear={selectedYear} />
                                 </div>
-
-                                {/* 4. 액션 플랜 카드 */}
                                 <div className="h-[620px]">
                                     <ActionPlanCard />
                                 </div>
@@ -245,7 +212,7 @@ export default function MyPage() {
                 )}
             </div>
 
-            {/* 하단 푸터 영역: 카피라이트 및 버전 정보 */}
+            {/* 하단 푸터 영역 */}
             <footer className="max-w-7xl mx-auto w-full mt-auto mb-12 px-6 md:px-12 pt-8 border-t border-orange-100 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-400 uppercase tracking-widest font-bold">
                 <span>CareLink Health Analytics v2.0</span>
                 <span>© 2026 CareLink Systems. All Rights Reserved.</span>
