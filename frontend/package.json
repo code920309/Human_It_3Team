@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build frontend --config frontend/vite.config.ts",
-    "preview": "vite preview frontend",
+    "build": "vite build",
+    "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
   },
