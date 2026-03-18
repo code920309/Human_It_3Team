@@ -5,7 +5,7 @@ const pool = require('../config/db');
 const supabase = require('../config/supabaseClient');
 
 // Helper to generate 6-digit OTP (Supabase 자체 OTP를 사용할 경우 불필요할 수 있으나, 기존과 동일한 흐름을 위해 보존하거나 Supabase 기능을 호출함)
-const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+/* [수정] Supabase Auth API를 사용한 실제 이메일 인증번호 발송 (기존 local generateOTP 제거) */
 
 /* [수정] Supabase Auth API를 사용한 실제 이메일 인증번호 발송 */
 exports.requestOTP = async (req, res) => {
@@ -86,7 +86,8 @@ exports.verifyOTP = async (req, res) => {
 /* [수정] Supabase Auth로 회원가입 최종 완료 (비밀번호 설정 등) */
 exports.signup = async (req, res) => {
     const { password, name, birth_date, gender } = req.body;
-    const email = req.body.email ? req.body.email.trim() : '';
+    /* [수정] 회원가입 시에도 이메일 소문자화 및 공백 제거 적용 */
+    const email = req.body.email ? String(req.body.email).trim().toLowerCase() : '';
 
     if (!email || !password || !name || !birth_date || !gender) {
         return res.status(400).json({ success: false, message: '모든 항목을 입력해주세요.' });
@@ -179,4 +180,41 @@ exports.getMe = async (req, res) => {
         return res.status(500).json({ success: false, message: '서버 오류가 발생했습니다.' });
     }
 };
+/* [수정] 회원 프로필 정보 수정 (이름, 생년월일, 성별, 전화번호) */
+exports.updateProfile = async (req, res) => {
+    const { name, birth_date, gender, phone } = req.body;
+    try {
+        await pool.query(
+            'UPDATE users SET name = ?, birth_date = ?, gender = ?, phone = ? WHERE id = ?',
+            [name, birth_date, gender, phone, req.user.id]
+        );
+        return res.json({ success: true, message: '프로필이 성공적으로 수정되었습니다.' });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ success: false, message: '서버 오류가 발생했습니다.' });
+    }
+};
 
+/* [수정] 비밀번호 변경 로직 추가 */
+exports.updatePassword = async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+    try {
+        const [users] = await pool.query('SELECT * FROM users WHERE id = ?', [req.user.id]);
+        if (users.length === 0) return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' });
+        
+        const isMatch = await bcrypt.compare(currentPassword, users[0].password_hash);
+        if (!isMatch) return res.status(401).json({ success: false, message: '현재 비밀번호가 일치하지 않습니다.' });
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+        await pool.query('UPDATE users SET password_hash = ? WHERE id = ?', [hashedPassword, req.user.id]);
+
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        if (error) throw error;
+
+        return res.json({ success: true, message: '비밀번호가 성공적으로 변경되었습니다.' });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ success: false, message: '서버 오류 발생' });
+    }
+};
