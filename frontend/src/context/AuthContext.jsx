@@ -31,8 +31,10 @@ export const AuthProvider = ({ children }) => {
                 setUser(res.data.data);
             }
         } catch (err) {
-            console.error('인증 세션 복구 실패:', err);
-            // 만료된 경우 API 인터셉터에서 처리가 이루어지거나, 여기서 초기화
+            console.error('❌ 인증 세션 복구 실패:', err.message);
+            // 403/401 에러는 토큰 만료로 인터셉터에서 처리됨
+            // 기타 에러는 조용히 무시하고 토큰 제거
+            localStorage.removeItem('carelink_token');
         } finally {
             setLoading(false);
         }

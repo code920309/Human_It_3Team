@@ -1,13 +1,14 @@
 const jwt = require('jsonwebtoken');
 
 /**
- * Access Token 생성 (단기 보호용, 15분)
+ * Access Token 생성 (단기 보호용, 1시간으로 연장)
+ * 파일 업로드에 시간이 걸릴 수 있으므로 충분한 시간 할당
  */
 const generateAccessToken = (user) => {
     return jwt.sign(
         { id: user.id, email: user.email },
         process.env.JWT_SECRET,
-        { expiresIn: '15m' }
+        { expiresIn: '1h' }  // 15분 → 1시간으로 변경
     );
 };
 

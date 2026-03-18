@@ -162,7 +162,7 @@ export default function MyPage() {
                             />
                         </div>
                         <div className="h-[450px]">
-                            <HealthReportCard />
+                            <HealthReportCard selectedYear={selectedYear} />
                         </div>
 
                         {/* 건강 트렌드 및 액션 플랜 섹션 */}

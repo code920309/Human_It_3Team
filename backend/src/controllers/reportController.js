@@ -147,8 +147,12 @@ exports.saveReport = async (req, res) => {
 
         return res.json({ success: true, message: '건강검진 데이터가 저장되었습니다.' });
     } catch (err) {
-        console.error(err);
-        return res.status(500).json({ success: false, message: '데이터 저장 중 오류가 발생했습니다.' });
+        console.error('❌ saveReport 에러:', err);
+        return res.status(500).json({ 
+            success: false, 
+            message: `데이터 저장 중 오류: ${err.message}`,
+            error: err.message 
+        });
     }
 };
 

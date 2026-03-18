@@ -19,7 +19,7 @@ const HealthTrendChart = ({ history }) => {
         <span className="text-xs text-slate-300">최근 검진 기록</span>
       </div>
       
-      <div className="flex-1 w-full min-h-[200px]">
+      <div className="flex-1 w-full h-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart 
             data={history}
