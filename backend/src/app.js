@@ -1,9 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-const dotenv = require('dotenv');
-
-dotenv.config();
+const env = require('./config/env'); // [최적화] 환경 변수 매니저 도입
 
 const app = express();
 
@@ -137,14 +135,14 @@ app.get('/.netlify/functions/api/debug-db', async (req, res) => {
                 found: sim.length > 0,
                 user: sim[0] ? { email: sim[0].email, verified: sim[0].email_verified } : null
             },
-            has_db_url: !!process.env.DATABASE_URL
+            has_db_url: !!env.DATABASE_URL
         });
     } catch (err) {
         res.status(500).json({
             success: false,
             error: err.message,
             stack: err.stack,
-            has_db_url: !!process.env.DATABASE_URL,
+            has_db_url: !!env.DATABASE_URL,
             isPostgres: dbConfig.isPostgres
         });
     }
@@ -155,9 +153,13 @@ module.exports = app;
 
 // Port Settings (Only run listen if not in a serverless environment)
 if (require.main === module) {
-    const PORT = process.env.PORT || 5000;
+    const PORT = env.PORT;
     app.listen(PORT, () => {
-        console.log(`Server is running on port ${PORT}`);
+        console.log(`====================================================`);
+        console.log(`🚀 CareLink Backend Server is running!`);
+        console.log(`📡 URL: http://localhost:${PORT}`);
+        console.log(`📂 DB: ${env.DATABASE_URL ? 'Cloud PostgreSQL' : 'Local MySQL'}`);
+        console.log(`====================================================`);
     });
 }
 

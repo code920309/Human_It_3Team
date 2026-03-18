@@ -2,48 +2,42 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const axios = require('axios');
 const fs = require('fs');
 
-/**
- * API 키 분산 관리 시스템
- * - 환경변수에서 쉼표로 구분된 여러 Gemini API 키를 읽음
- * - 매 요청마다 다음 API 키로 순환 전환 (SDK 및 REST API 모두)
- * - 모델: gemini-2.5-flash
- */
+/* MERGED FROM 업로드OCR: 다국어 지원 및 모델 최적화 */
 
-// 환경변수에서 API 키 배열 파싱
-const apiKeysString = process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY;
-const apiKeys = apiKeysString ? apiKeysString.split(',').map(key => key.trim()).filter(key => key.length > 0) : [];
+const env = require('../config/env'); // [최적화] 환경 변수 매니저 도입
 
-if (apiKeys.length === 0) {
-    console.warn('⚠️ GEMINI_API_KEYS 또는 GEMINI_API_KEY가 설정되어 있지 않습니다.');
-} else {
-    console.log(`✅ Gemini API 키 ${apiKeys.length}개 로드됨 (토큰 할당량 분산: 45,000 TPM)`);
-}
-
+// 전역 인덱스 (순환 사용 목적)
 let currentKeyIndex = 0;
 
 /**
- * 다음 API 키로 SDK 클라이언트 반환 (순환)
+ * [최적화] 다음 API 키를 반환하고 인덱스 순환
+ * 대표님, 이 함수는 설정된 여러 개의 API 키를 번갈아 가며 사용하여 
+ * 하나의 키에 할당량이 몰리는 것을 방지합니다.
  */
-function getNextGenAI() {
-    if (apiKeys.length === 0) throw new Error('Gemini API key is not configured.');
-    const apiKey = apiKeys[currentKeyIndex];
-    const keyPreview = apiKey.substring(0, 10) + '...' + apiKey.substring(apiKey.length - 5);
-    console.log(`🔄 SDK API 키 사용: ${keyPreview} (${currentKeyIndex + 1}/${apiKeys.length})`);
+function getNextKey() {
+    const apiKeys = env.GEMINI_API_KEYS;
+    if (!apiKeys || apiKeys.length === 0) {
+        throw new Error('❌ GEMINI_API_KEYS 또는 GEMINI_API_KEY가 설정되어 있지 않습니다. .env 파일을 확인해 주세요.');
+    }
+    const key = apiKeys[currentKeyIndex];
     currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
-    return new GoogleGenerativeAI(apiKey);
+    return key;
 }
 
 /**
- * REST API를 사용한 Gemini 호출
+ * SDK 사용을 위한 genAI 인스턴스 반환
  */
-async function callGeminiREST(message, history = [], systemInstruction = '') {
-    if (apiKeys.length === 0) throw new Error('Gemini API key is not configured.');
-    const apiKey = apiKeys[currentKeyIndex];
-    const keyPreview = apiKey.substring(0, 10) + '...' + apiKey.substring(apiKey.length - 5);
-    console.log(`🔄 REST API 키 사용: ${keyPreview} (${currentKeyIndex + 1}/${apiKeys.length})`);
-    currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
+function getNextGenAI() {
+    return new GoogleGenerativeAI(getNextKey());
+}
 
-    const URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+/**
+ * REST API 호출을 위한 헬퍼
+ */
+async function callGeminiREST(message, history = [], systemInstruction = "") {
+    const apiKey = getNextKey();
+    const modelName = "gemini-2.5-flash"; // 또는 사용 중인 최신 모델명
+    const URL = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
     const contents = [
         ...history.map(h => ({
@@ -65,39 +59,98 @@ async function callGeminiREST(message, history = [], systemInstruction = '') {
 
     try {
         const response = await axios.post(URL, body);
-        return response.data.candidates[0].content.parts[0].text;
+        if (response.data.candidates && response.data.candidates[0].content && response.data.candidates[0].content.parts) {
+            return response.data.candidates[0].content.parts[0].text;
+        }
+        throw new Error('Gemini REST API 응답 구조가 비정상입니다.');
     } catch (err) {
         console.error("Gemini REST API Error:", err.response?.data || err.message);
         throw err;
     }
 }
 
-// 파일 경로(로컬) 또는 버퍼(서버리스) 모두 처리
 function fileToGenerativePart(path, buffer, mimeType) {
-    const data = path ? fs.readFileSync(path) : buffer;
-    return {
-        inlineData: {
-            data: Buffer.from(data).toString("base64"),
-            mimeType
-        },
-    };
+  const data = path ? fs.readFileSync(path) : buffer;
+  return {
+    inlineData: {
+      data: Buffer.from(data).toString("base64"),
+      mimeType
+    },
+  };
 }
 
-exports.analyzeHealthReport = async (fileData, mimeType, userInfo) => {
+exports.analyzeHealthReport = async (fileData, mimeType, userInfo, lang = 'ko') => {
     const genAI = getNextGenAI();
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
+    
     const isPath = typeof fileData === 'string';
     const filePath = isPath ? fileData : null;
     const fileBuffer = isPath ? null : fileData;
 
-    const prompt = `
+    const isEnglish = lang === 'en';
+    const genderText = userInfo.gender === 'M'
+        ? (isEnglish ? 'Male' : '남성')
+        : (isEnglish ? 'Female' : '여성');
+
+    const prompt = isEnglish ? `
+You are CareLink's AI Health Analysis Engine.
+Analyze the uploaded health checkup result image, extract key health indicators, and generate an analysis report in ENGLISH.
+
+User Information:
+- Age: ${userInfo.age || 'Unknown'}
+- Gender: ${genderText}
+
+Extraction and Analysis Guidelines:
+1. Extract the following indicators:
+   - waist (waist circumference, cm)
+   - bpSys (systolic blood pressure, mmHg)
+   - bpDia (diastolic blood pressure, mmHg)
+   - glucose (fasting blood glucose, mg/dL)
+   - tg (triglycerides, mg/dL)
+   - hdl (HDL cholesterol, mg/dL)
+   - ldl (LDL cholesterol, mg/dL)
+   - ast, alt, gammaGtp (liver function values)
+   - bmi (body mass index)
+
+2. Respond with the following JSON format only (no text outside the JSON):
+{
+  "healthRecord": {
+    "waist": number,
+    "bpSys": number,
+    "bpDia": number,
+    "glucose": number,
+    "tg": number,
+    "hdl": number,
+    "ldl": number,
+    "ast": number,
+    "alt": number,
+    "gammaGtp": number,
+    "bmi": number
+  },
+  "aiReport": {
+    "summary": "2~4 sentence English summary",
+    "medicalRecommendation": "1~2 sentence medical recommendation in English",
+    "riskOverview": ["risk factor 1", "risk factor 2"],
+    "organStatus": {
+      "heart": "normal | borderline | risk",
+      "liver": "normal | borderline | risk",
+      "pancreas": "normal | borderline | risk",
+      "abdomen": "normal | borderline | risk",
+      "vessels": "normal | borderline | risk"
+    },
+    "healthScore": score between 0 and 100
+  }
+}
+
+Mark any values that cannot be extracted as null.
+The result must be valid JSON format.
+` : `
 너는 CareLink의 AI 건강 분석 엔진이다.
 사용자가 업로드한 건강검진 결과지 이미지를 분석하여 주요 건강 지표를 추출하고 분석 보고서를 작성하라.
 
 사용자 정보:
 - 나이: ${userInfo.age || '알 수 없음'}
-- 성별: ${userInfo.gender === 'M' ? '남성' : '여성'}
+- 성별: ${genderText}
 
 추출 및 분석 지침:
 1. 다음 지표들을 찾아 수치들을 추출하라:
@@ -145,11 +198,17 @@ exports.analyzeHealthReport = async (fileData, mimeType, userInfo) => {
 결과는 반드시 유효한 JSON 형식이어야 한다.
 `;
 
-    const imagePart = fileToGenerativePart(filePath, fileBuffer, mimeType);
+    // 한컴오피스 PDF 등 비표준 MIME 타입을 Gemini가 인식할 수 있는 표준 PDF MIME 타입으로 강제 변환
+    let finalMimeType = mimeType;
+    if (finalMimeType === 'application/haansoftpdf') {
+        finalMimeType = 'application/pdf';
+    }
+
+    const imagePart = fileToGenerativePart(filePath, fileBuffer, finalMimeType);
     const result = await model.generateContent([prompt, imagePart]);
     const response = await result.response;
     const text = response.text();
-
+    
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
         return JSON.parse(jsonMatch[0]);
@@ -158,62 +217,43 @@ exports.analyzeHealthReport = async (fileData, mimeType, userInfo) => {
 };
 
 exports.chatHealthConsultation = async (history, message, healthContext) => {
-    const systemInstruction = `너는 'CareLink'의 전문 건강 상담 AI 비서다. 
-사용자의 건강검진 데이터를 기반으로 정밀하고 따뜻한 의학적 상담을 제공하라.
+    const contextPrompt = `
+너는 CareLink의 전문 건강 상담 AI다. 
+사용자의 건강검진 데이터를 기반으로 친절하고 전문적인 의학적 조언을 제공하라.
 
-사용자 건강 프로필:
-- 혈압: ${healthContext.blood_pressure_s}/${healthContext.blood_pressure_d} mmHg
-- 혈당: ${healthContext.fasting_glucose} mg/dL
+사용자의 현재 건강 상태 (최신 데이터):
+- 허리둘레: ${healthContext.waist}cm
+- 혈압: ${healthContext.blood_pressure_s}/${healthContext.blood_pressure_d}mmHg
+- 공복혈당: ${healthContext.fasting_glucose}mg/dL
 - 콜레스테롤: HDL ${healthContext.hdl}, LDL ${healthContext.ldl}, TG ${healthContext.tg}
-- 간 수치: AST ${healthContext.ast}, ALT ${healthContext.alt}
+- 간 수치: AST ${healthContext.ast}, ALT ${healthContext.alt}, γ-GTP ${healthContext.gamma_gtp}
 - BMI: ${healthContext.bmi}
-- 종합 건강 점수: ${healthContext.health_score}점
+- 종합 점수: ${healthContext.health_score}점
 
-상담 규칙:
-1. AI답게 논리적이고 풍부한 정보를 제공하라.
-2. 사용자의 수치를 전문가처럼 분석하여 정상 범위와 비교 설명하라.
-3. 구체적인 생활 습관 개선(식단, 운동)을 실천 가능하게 제안하라.
-4. "본 상담은 참고용이며, 정확한 진단은 전문의와 상의하십시오" 문구를 포함하라.
-5. 성격은 차분하고 지적이며 친절하게 유지하라.`;
-
-    const modelNames = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"];
-    
-    for (const modelName of modelNames) {
-        try {
-            console.log(`Trying Gemini model: ${modelName}`);
-            const genAI = getNextGenAI();
-            const model = genAI.getGenerativeModel({ 
-                model: modelName,
-                systemInstruction: systemInstruction 
-            });
-
-            // Format history for SDK
-            const sdkHistory = history.map(h => ({
-                role: h.role === 'user' ? 'user' : 'model',
-                parts: [{ text: String(h.message || h.content || '') }]
-            }));
-
-            const firstUserIdx = sdkHistory.findIndex(h => h.role === 'user');
-            const finalHistory = firstUserIdx !== -1 ? sdkHistory.slice(firstUserIdx) : [];
-
-            const chat = model.startChat({ history: finalHistory });
-            const result = await chat.sendMessage(message);
-            const response = await result.response;
-            const text = response.text();
-            
-            if (text) return text;
-        } catch (error) {
-            console.error(`Gemini Model ${modelName} failed:`, error.message);
-            // Continue to next model
-        }
-    }
+상담 원칙:
+1. 항상 따뜻하고 격려하는 말투를 사용하라.
+2. 사용자의 구체적인 수치를 언급하며 조언하라.
+3. 심각한 수치가 있다면 반드시 병원 방문을 권고하라.
+4. 답변은 한국어로 하라.
+`;
 
     try {
-        console.log("Trying REST API fallback...");
-        return await callGeminiREST(message, history, systemInstruction);
-    } catch (err) {
-        console.error("All Gemini methods failed.");
-        throw new Error("모든 제미나이 모델 호출에 실패했습니다. API 키 또는 할당량을 확인해주세요.");
+        return await callGeminiREST(message, history, contextPrompt);
+    } catch (error) {
+        console.error("REST API Error:", error.message);
+        const genAI = getNextGenAI();
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const chat = model.startChat({
+            history: history.map(h => ({
+                role: h.role === 'user' ? 'user' : 'model',
+                parts: [{ text: String(h.content || h.message || '') }]
+            })),
+            systemInstruction: contextPrompt
+        });
+
+        const result = await chat.sendMessage(message);
+        const response = await result.response;
+        return response.text();
     }
 };
 

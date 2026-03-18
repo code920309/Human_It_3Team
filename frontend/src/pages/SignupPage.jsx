@@ -1,7 +1,10 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 import { Heart, Mail, Lock, User, Calendar, ArrowRight, ShieldCheck, AlertCircle, ChevronRight } from 'lucide-react';
+
+/* MERGED FROM 업로드OCR: 게스트 데이터 연동 및 자동 로그인 로직 통합 */
 
 export default function SignupPage() {
   const [step, setStep] = useState(1);
@@ -20,6 +23,27 @@ export default function SignupPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
+
+  // 비회원 분석 데이터가 있을 경우 폼에 미리 채우기
+  useEffect(() => {
+    if (location.state?.guestName) {
+      let calculatedBirthDate = '';
+      if (location.state.guestAge) {
+        const currentYear = new Date().getFullYear();
+        const birthYear = currentYear - parseInt(location.state.guestAge);
+        calculatedBirthDate = `${birthYear}-01-01`;
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        name: location.state.guestName,
+        gender: location.state.guestGender || prev.gender,
+        birth_date: calculatedBirthDate || prev.birth_date
+      }));
+    }
+  }, [location.state]);
 
   const handleRequestOtp = async () => {
     setError('');
@@ -57,7 +81,7 @@ export default function SignupPage() {
     setError('');
     setLoading(true);
 
-    // [수정] Supabase 설정(Letters and digits)에 맞춘 보안 검증
+    // [보안 지침 준수] 비밀번호 정책 검증 (Human_It_3Team-main 기반)
     const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d).{10,}$/;
     if (!passwordRegex.test(formData.password)) {
       setError('비밀번호는 최소 10자이며 영문과 숫자를 모두 포함해야 합니다.');
@@ -66,13 +90,44 @@ export default function SignupPage() {
     }
 
     try {
-      const res = await api.post('/auth/signup', {
+      // 1. 회원가입 프로세스
+      const signupRes = await api.post('/auth/signup', {
         email,
         ...formData
       });
-      if (res.data.success) {
-        alert('회원가입이 완료되었습니다. 로그인해주세요.');
-        navigate('/login');
+
+      if (signupRes.data.success) {
+        // 2. 가입 시 자동 로그인을 위해 로그인 API 호출
+        const loginRes = await api.post('/auth/login', {
+            email,
+            password: formData.password
+        });
+
+        if (loginRes.data.success) {
+          // AuthContext에 로그인 정보를 넘겨 전역 로그인 상태로 전환
+          // Human_It의 login 함수는 (token, user, keepLoggedIn) 형태
+          login(loginRes.data.accessToken, loginRes.data.user, true);
+
+          // 3. 비회원 분석 기록이 있다면 가입된 계정으로 저장(Save) 시도
+          if (location.state?.guestData && location.state?.aiReport) {
+            try {
+              await api.post('/reports/save', {
+                year: location.state.year || new Date().getFullYear(),
+                healthRecord: location.state.guestData,
+                aiReport: location.state.aiReport
+              });
+              console.log('✅ 비회원 분석 리포트가 성공적으로 저장되었습니다.');
+            } catch (saveErr) {
+              console.error('❌ 분석 기록 저장 실패:', saveErr);
+            }
+          }
+
+          alert('회원가입이 완료되었습니다! 분석 기록이 내 계정에 안전하게 저장되었습니다.');
+          navigate('/mypage'); 
+        } else {
+          alert('회원가입이 완료되었습니다. 로그인을 진행해주세요.');
+          navigate('/login');
+        }
       }
     } catch (err) {
       setError(err.response?.data?.message || '회원가입 중 오류가 발생했습니다.');
@@ -140,17 +195,15 @@ export default function SignupPage() {
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                      {/* [수정] Supabase 설정에 맞춰 OTP 길이를 8자리로 변경 */}
                       <input
                         type="text"
                         maxLength={8}
                         className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 focus:ring-2 focus:ring-teal-500 outline-none transition-all font-bold tracking-widest text-center"
-                        placeholder="인증번호 8자리 숫자"
+                        placeholder="인증번호 8자리"
                         value={otp}
                         onChange={(e) => setOtp(e.target.value)}
                       />
                     </div>
-                    {/* [수집] 마스터의 Supabase 설정(Email OTP Length: 8)에 맞춰 8자리 필수 입력 적용 */}
                     <button
                       onClick={handleVerifyOtp}
                       disabled={loading || otp.length < 8}
@@ -177,12 +230,11 @@ export default function SignupPage() {
               </div>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                {/* [수정] Supabase 비밀번호 정책(10자 이상, 복잡성)에 맞게 안내 문구 변경 */}
                 <input
                   type="password"
                   required
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 focus:ring-2 focus:ring-teal-500 outline-none transition-all"
-                  placeholder="비밀번호 (10자 이상, 대/소문자, 숫자, 기호 포함)"
+                  placeholder="비밀번호 (10자 이상, 영문+숫자)"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 />
