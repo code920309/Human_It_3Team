@@ -32,22 +32,30 @@ export default function MyPage() {
         try {
             // 사용 가능한 검진 연도 목록 API 호출
             const yearsRes = await api.get('/reports/years');
+            // [Portfolio Note] 데이터 정합성 확인을 위한 초기 연도 데이터 수신 디버깅
+            // console.log('[DEBUG] Years API Response:', yearsRes.data);
 
             if (yearsRes.data.success) {
                 const years = yearsRes.data.data.availableYears;
                 setAvailableYears(years);
 
                 if (years.length > 0) {
+                    // [Portfolio Note] 연도 리스트 존재 여부 확인 로그
+                    // console.log('[DEBUG] Available Years found:', years);
+                    
                     // 최신 연도의 리포트 데이터를 우선적으로 호출
                     await fetchReport(years[0]);
                     setSelectedYear(years[0]);
-                    
+
                     // 연도별 점수 히스토리 생성 (데이터 시뮬레이션을 위한 임시 로직)
                     const mockHistory = years.map((y, i) => ({
                         date: `${y}년`,
                         score: 80 + Math.floor(Math.random() * 15)
                     })).reverse();
                     setHistory(mockHistory);
+                } else {
+                    // [Portfolio Note] 데이터가 없는 유저의 예외 처리 흐름 추적
+                    // console.log('[DEBUG] No available years found for this user.');
                 }
             }
         } catch (err) {
@@ -60,7 +68,11 @@ export default function MyPage() {
     // 특정 연도의 상세 건강 리포트 데이터를 호출하는 함수
     const fetchReport = async (year) => {
         try {
+            // [Portfolio Note] 연도 변경 시 트리거되는 리포트 페칭 추적
+            // console.log(`[DEBUG] Fetching report for year: ${year}`);
             const res = await api.get(`/reports/health?year=${year}`);
+            // [Portfolio Note] 최종 리포트 데이터 바인딩 확인
+            // console.log('[DEBUG] Health Report API Response:', res.data);
             if (res.data.success) {
                 setReportData(res.data.data);
             }
@@ -96,8 +108,8 @@ export default function MyPage() {
                         <div className="hidden md:flex items-center space-x-8">
                             <Link to="/mypage" className="text-teal-600 transition-colors font-bold">건강 대시보드</Link>
                             <Link to="/report" className="text-slate-600 hover:text-teal-600 transition-colors font-semibold">검진 기록</Link>
-                            <Link to="/chatbot" className="text-slate-600 hover:text-teal-600 transition-colors font-semibold">AI 챗봇</Link>
-                            <button 
+
+                            <button
                                 onClick={logout}
                                 className="bg-teal-600 text-white px-6 py-2.5 rounded-lg font-bold hover:bg-teal-700 transition-all shadow-md"
                             >
@@ -121,7 +133,7 @@ export default function MyPage() {
 
                 {!reportData ? (
                     // 데이터가 없을 때 표시되는 섹션 (Empty State)
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         className="bg-white rounded-3xl p-16 text-center border border-orange-100 shadow-sm"
@@ -141,7 +153,7 @@ export default function MyPage() {
                     // 리포트 데이터가 있을 때의 대시보드 레이아웃
                     <div className="grid grid-cols-1 lg:grid-cols-[65%_35%] gap-8 pb-16 items-start">
                         {/* AI 요약 섹션: 그리드 2열을 모두 차지 */}
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.1 }}
@@ -155,10 +167,10 @@ export default function MyPage() {
 
                         {/* 건강 점수 및 리포트 카드 섹션 */}
                         <div className="h-[450px]">
-                            <HealthScoreCard 
-                                score={reportData?.healthRecord?.health_score || 0} 
-                                change={5} 
-                                status="안정적" 
+                            <HealthScoreCard
+                                score={reportData?.healthRecord?.health_score || 0}
+                                change={5}
+                                status="안정적"
                             />
                         </div>
                         <div className="h-[450px]">
