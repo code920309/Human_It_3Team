@@ -131,18 +131,20 @@ export default function SignupPage() {
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      {/* [수정] Supabase 설정에 맞춰 OTP 길이를 8자리로 변경 */}
                       <input
                         type="text"
-                        maxLength={6}
+                        maxLength={8}
                         className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 focus:ring-2 focus:ring-teal-500 outline-none transition-all font-bold tracking-widest"
-                        placeholder="000000"
+                        placeholder="00000000"
                         value={otp}
                         onChange={(e) => setOtp(e.target.value)}
                       />
                     </div>
+                    {/* [수정] OTP 길이가 8자리가 아닐 경우 버튼 비활성화 */}
                     <button
                       onClick={handleVerifyOtp}
-                      disabled={loading || otp.length < 6}
+                      disabled={loading || otp.length < 8}
                       className="bg-teal-600 hover:bg-teal-700 text-white px-6 rounded-2xl font-bold transition-all disabled:opacity-50"
                     >
                       확인
@@ -166,11 +168,12 @@ export default function SignupPage() {
               </div>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                {/* [수정] Supabase 비밀번호 정책(10자 이상, 복잡성)에 맞게 안내 문구 변경 */}
                 <input
                   type="password"
                   required
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 focus:ring-2 focus:ring-teal-500 outline-none transition-all"
-                  placeholder="비밀번호 (8자 이상)"
+                  placeholder="비밀번호 (10자 이상, 대/소문자, 숫자, 기호 포함)"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 />

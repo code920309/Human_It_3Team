@@ -7,7 +7,7 @@ import 'swiper/css/pagination';
 import 'swiper/css/navigation';
 import { Heart, Star } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-/* [Tigra 수정] API 요청을 위해 공통 axios 인스턴스 임포트 */
+/* [수정] API 요청을 위해 공통 axios 인스턴스 임포트 */
 import api from '../api/axios';
 
 export default function HomePage() {
@@ -24,9 +24,9 @@ export default function HomePage() {
       return;
     }
     try {
-      /* [Tigra 수정] 하드코딩된 localhost URL 대신 공통 axios 인스턴스(api)를 사용하여 배포 환경 대응 */
+      /* [수정] 하드코딩된 localhost URL 대신 공통 axios 인스턴스(api)를 사용하여 배포 환경 대응 */
       const response = await api.post('/contacts', { email, message });
-      
+
       if (response.data.success || response.status === 200 || response.status === 201) {
         alert('소중한 의견이 전달되었습니다!');
         setEmail(''); // 입력창 비우기
@@ -266,27 +266,27 @@ export default function HomePage() {
             <div>
               <h3 className="text-2xl font-extrabold mb-8 text-slate-900">문의하기</h3>
               <form className="space-y-4" onSubmit={handleSubmit}>
-              <input 
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg py-4 px-4 focus:ring-2 focus:ring-teal-500 outline-none" 
-                placeholder="이메일" 
-                type="email" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)} // 입력값 연결
-              />
-              <textarea 
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg py-4 px-4 focus:ring-2 focus:ring-teal-500 outline-none" 
-                placeholder="메시지" 
-                rows={4}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)} // 입력값 연결
-              ></textarea>
-              <button
-                type="submit" // button -> submit으로 변경
-                className="w-full bg-red-500 hover:bg-red-600 text-white font-extrabold py-4 rounded-lg shadow-lg transition-all transform hover:-translate-y-1"
-              >
-                메시지 보내기
-              </button>
-            </form>
+                <input
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg py-4 px-4 focus:ring-2 focus:ring-teal-500 outline-none"
+                  placeholder="이메일"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)} // 입력값 연결
+                />
+                <textarea
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg py-4 px-4 focus:ring-2 focus:ring-teal-500 outline-none"
+                  placeholder="메시지"
+                  rows={4}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)} // 입력값 연결
+                ></textarea>
+                <button
+                  type="submit" // button -> submit으로 변경
+                  className="w-full bg-red-500 hover:bg-red-600 text-white font-extrabold py-4 rounded-lg shadow-lg transition-all transform hover:-translate-y-1"
+                >
+                  메시지 보내기
+                </button>
+              </form>
             </div>
           </div>
           <div className="pt-8 border-t border-slate-100 flex flex-col items-center gap-3 text-slate-400 text-sm font-medium">
