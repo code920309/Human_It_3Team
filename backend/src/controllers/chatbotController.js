@@ -6,29 +6,32 @@ exports.sendMessage = async (req, res) => {
     if (!message) return res.status(400).json({ success: false, message: '메시지를 입력해주세요.' });
 
     try {
-        // 1. Get latest health data for context
+        // 1. Get latest health data for context (Optional)
         const [healthRows] = await pool.query(
             'SELECT * FROM health_data WHERE user_id = ? ORDER BY exam_year DESC LIMIT 1',
             [req.user.id]
         );
         
-        if (healthRows.length === 0) {
-            return res.status(404).json({ success: false, message: '분석된 건강 데이터가 없습니다. 먼저 리포트를 업로드해주세요.' });
-        }
+        // Context object construction
+        const healthContext = healthRows.length > 0 ? healthRows[0] : { 
+            waist: '없음', blood_pressure_s: '없음', blood_pressure_d: '없음', 
+            fasting_glucose: '없음', hdl: '없음', ldl: '없음', tg: '없음', 
+            ast: '없음', alt: '없음', gamma_gtp: '없음', bmi: '없음', health_score: '없음' 
+        };
 
         // 2. Get chat history (last 10 messages)
         const [historyRows] = await pool.query(
-            'SELECT role, content FROM chatbot_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 10',
+            'SELECT role, message FROM chatbot_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 10',
             [req.user.id]
         );
         const history = historyRows.reverse();
 
         // 3. Get AI Response
-        const aiResponse = await geminiService.chatHealthConsultation(history, message, healthRows[0]);
+        const aiResponse = await geminiService.chatHealthConsultation(history, message, healthContext);
 
         // 4. Save to DB
-        await pool.query('INSERT INTO chatbot_history (user_id, role, content) VALUES (?, ?, ?)', [req.user.id, 'user', message]);
-        await pool.query('INSERT INTO chatbot_history (user_id, role, content) VALUES (?, ?, ?)', [req.user.id, 'assistant', aiResponse]);
+        await pool.query('INSERT INTO chatbot_history (user_id, role, message) VALUES (?, ?, ?)', [req.user.id, 'user', message]);
+        await pool.query('INSERT INTO chatbot_history (user_id, role, message) VALUES (?, ?, ?)', [req.user.id, 'assistant', aiResponse]);
 
         return res.json({
             success: true,
@@ -43,7 +46,7 @@ exports.sendMessage = async (req, res) => {
 exports.getHistory = async (req, res) => {
     try {
         const [rows] = await pool.query(
-            'SELECT role, content, created_at FROM chatbot_history WHERE user_id = ? ORDER BY created_at ASC',
+            'SELECT role, message, created_at FROM chatbot_history WHERE user_id = ? ORDER BY created_at ASC',
             [req.user.id]
         );
         return res.json({
