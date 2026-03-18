@@ -5,11 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-<<<<<<< HEAD
-    "build": "vite build --config vite.config.js",
-=======
     "build": "vite build",
->>>>>>> origin/main
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
