@@ -7,6 +7,8 @@ import 'swiper/css/pagination';
 import 'swiper/css/navigation';
 import { Heart, Star } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+/* [Tigra 수정] API 요청을 위해 공통 axios 인스턴스 임포트 */
+import api from '../api/axios';
 
 export default function HomePage() {
   const { user, logout } = useAuth();
@@ -22,13 +24,10 @@ export default function HomePage() {
       return;
     }
     try {
-      // 주의: 백엔드 서버 주소와 포트(예: 5000)는 팀 설정에 따라 다를 수 있습니다.
-      const response = await fetch('http://localhost:5000/api/contacts', { 
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, message })
-      });
-      if (response.ok) {
+      /* [Tigra 수정] 하드코딩된 localhost URL 대신 공통 axios 인스턴스(api)를 사용하여 배포 환경 대응 */
+      const response = await api.post('/contacts', { email, message });
+      
+      if (response.data.success || response.status === 200 || response.status === 201) {
         alert('소중한 의견이 전달되었습니다!');
         setEmail(''); // 입력창 비우기
         setMessage('');
