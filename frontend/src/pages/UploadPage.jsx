@@ -8,41 +8,69 @@ export default function UploadPage() {
   const [uploading, setUploading] = useState(false);
   const [year, setYear] = useState(new Date().getFullYear());
   const [manualData, setManualData] = useState({
-    height: 170, weight: 70, waist: 85, bpSys: 120, bpDia: 80, glucose: 95, tg: 140, hdl: 50, ldl: 120, ast: 30, alt: 30, gammaGtp: 30
+    height: '', weight: '', waist: '', bpSys: '', bpDia: '', glucose: '', tg: '', hdl: '', ldl: '', ast: '', alt: '', gammaGtp: ''
   });
+  const [aiReport, setAiReport] = useState(null);
+  const [analysisDone, setAnalysisDone] = useState(false);
   const navigate = useNavigate();
 
   const handleFileUpload = async (e) => {
     const selectedFile = e.target.files[0];
     if (!selectedFile) return;
     setFile(selectedFile);
+    setAnalysisDone(false); // 파일 변경 시 분석 초기화
+    setAiReport(null);
   };
 
   const handleUploadSubmit = async (e) => {
     e.preventDefault();
     setUploading(true);
     try {
-      const formData = new FormData();
-      if (file) {
-        formData.append('report', file);
+      if (file && !analysisDone) {
+        // Step 1: AI 분석(OCR)
+        const formData = new FormData();
+        formData.append('reportFile', file);
         formData.append('year', year);
-      }
-      
-      const res = await api.post('/reports/upload', 
-        file ? formData : { ...manualData, year }, 
-        {
-          headers: { 
-            'Content-Type': file ? 'multipart/form-data' : 'application/json'
-          }
-        }
-      );
+        
+        const res = await api.post('/reports/analyze', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
 
-      if (res.data.success) {
-        navigate('/mypage');
+        if (res.data.success) {
+          const extracted = res.data.data.healthRecord;
+          setManualData({
+            height: extracted.height || '', 
+            weight: extracted.weight || '',
+            waist: extracted.waist || '',
+            bpSys: extracted.bpSys || '',
+            bpDia: extracted.bpDia || '',
+            glucose: extracted.glucose || '',
+            tg: extracted.tg || '',
+            hdl: extracted.hdl || '',
+            ldl: extracted.ldl || '',
+            ast: extracted.ast || '',
+            alt: extracted.alt || '',
+            gammaGtp: extracted.gammaGtp || ''
+          });
+          setAiReport(res.data.data.aiReport);
+          setAnalysisDone(true);
+          // 알림 대신 UI에 자연스럽게 표시
+        }
+      } else {
+        // Step 2: 데이터 최종 저장
+        const payload = {
+          year,
+          healthRecord: manualData,
+          aiReport: aiReport
+        };
+        const res = await api.post('/reports/save', payload);
+        if (res.data.success) {
+          navigate('/mypage');
+        }
       }
     } catch (err) {
       console.error('Upload failed:', err);
-      alert('업로드에 실패했습니다. 다시 시도해주세요.');
+      alert(err.response?.data?.message || '처리 중 오류가 발생했습니다. 다시 시도해주세요.');
     } finally {
       setUploading(false);
     }
@@ -88,22 +116,37 @@ export default function UploadPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-500 font-medium">1. 구글 Vision OCR 텍스트 추출</span>
-                  <span className={file ? "text-teal-500 font-bold" : "text-slate-300"}>{file ? "준비완료" : "대기 중"}</span>
+                  <span className={analysisDone ? "text-teal-500 font-bold" : (file ? "text-orange-500 font-bold" : "text-slate-300")}>
+                    {analysisDone ? "추출완료" : (file ? "대기 중" : "대기 중")}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500 font-medium">2. Gemini 1.5 Flash 지표 분석</span>
-                  <span className={file ? "text-teal-500 font-bold" : "text-slate-300"}>{file ? "준비완료" : "대기 중"}</span>
+                  <span className="text-slate-500 font-medium">2. Gemini 3.0 Flash 지표 분석</span>
+                  <span className={analysisDone ? "text-teal-500 font-bold" : (file ? "text-orange-500 font-bold" : "text-slate-300")}>
+                    {analysisDone ? "분석완료" : (file ? "대기 중" : "대기 중")}
+                  </span>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* Manual Input Section */}
+          {/* Manual Input & Review Section */}
           <section className="space-y-8">
             <div className="text-center lg:text-left">
-              <h2 className="text-2xl font-black text-slate-900 mb-2">데이터 확인 및 입력</h2>
-              <p className="text-slate-500 font-medium leading-relaxed">추출된 수치를 확인하거나 직접 정보를 <br />입력하여 건강 분석을 시작하세요.</p>
+              <h2 className="text-2xl font-black text-slate-900 mb-2">데이터 입력 및 확인</h2>
+              <p className="text-slate-500 font-medium leading-relaxed">
+                빈 칸에 직접 정보를 입력하거나, 스마트 업로드 후 자동 추출된 <br />결과가 맞는지 확인하고 빈 항목을 채워주세요.
+              </p>
             </div>
+
+            {analysisDone && aiReport && (
+               <div className="bg-teal-50 border border-teal-100 p-6 rounded-3xl shadow-sm text-sm">
+                 <h3 className="text-teal-800 font-black flex items-center gap-2 mb-3">
+                   <AlertCircle className="w-5 h-5" /> AI 추출 요약
+                 </h3>
+                 <p className="text-teal-700 leading-relaxed font-medium">{aiReport.summary}</p>
+               </div>
+            )}
 
             <form onSubmit={handleUploadSubmit} className="bg-white p-8 rounded-3xl shadow-sm border border-orange-50 space-y-6">
               <div className="grid grid-cols-2 gap-4">
@@ -113,30 +156,35 @@ export default function UploadPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">신장 (cm)</label>
-                  <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-600" value={manualData.height} onChange={(e) => setManualData({...manualData, height: parseFloat(e.target.value)})} />
+                  <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-600" value={manualData.height} onChange={(e) => setManualData({...manualData, height: e.target.value})} placeholder="예: 170" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">체중 (kg)</label>
-                  <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-600" value={manualData.weight} onChange={(e) => setManualData({...manualData, weight: parseFloat(e.target.value)})} />
+                  <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-600" value={manualData.weight} onChange={(e) => setManualData({...manualData, weight: e.target.value})} placeholder="예: 70" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">허리둘레 (cm)</label>
+                  <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-600" value={manualData.waist} onChange={(e) => setManualData({...manualData, waist: e.target.value})} placeholder="예: 85" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">공복 혈당</label>
-                  <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-600" value={manualData.glucose} onChange={(e) => setManualData({...manualData, glucose: parseFloat(e.target.value)})} />
+                  <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-600" value={manualData.glucose} onChange={(e) => setManualData({...manualData, glucose: e.target.value})} placeholder="예: 95" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">중성 지방</label>
-                  <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-600" value={manualData.tg} onChange={(e) => setManualData({...manualData, tg: parseFloat(e.target.value)})} />
+                  <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-600" value={manualData.tg} onChange={(e) => setManualData({...manualData, tg: e.target.value})} placeholder="예: 140" />
                 </div>
+                {/* 추후 다른 지표(혈압 등)도 추가/확장 가능 */}
               </div>
 
               <div className="pt-2">
                 <button 
                   type="submit" 
-                  disabled={uploading || (!file && !manualData.glucose)}
+                  disabled={uploading}
                   className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-5 rounded-2xl shadow-lg transition-all transform hover:-translate-y-1 flex items-center justify-center gap-3 disabled:opacity-50 active:scale-95"
                 >
                   {uploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <CheckCircle2 className="w-6 h-6" />}
-                  {file ? "AI 분석 시작하기" : "데이터 저장 및 분석"}
+                  {file && !analysisDone ? "AI 스마트 분석 시작하기" : "최종 데이터 확인 및 저장"}
                 </button>
               </div>
             </form>

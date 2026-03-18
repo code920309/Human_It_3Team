@@ -15,7 +15,7 @@ function fileToGenerativePart(path, buffer, mimeType) {
 }
 
 exports.analyzeHealthReport = async (fileData, mimeType, userInfo) => {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
     
     // fileData can be a path (string) or a buffer
     const isPath = typeof fileData === 'string';
@@ -91,7 +91,7 @@ exports.analyzeHealthReport = async (fileData, mimeType, userInfo) => {
 };
 
 exports.chatHealthConsultation = async (history, message, healthContext) => {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
     const contextPrompt = `
 너는 CareLink의 전문 건강 상담 AI다. 
@@ -127,7 +127,7 @@ exports.chatHealthConsultation = async (history, message, healthContext) => {
 };
 
 exports.generateActionPlan = async (healthContext) => {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
     const prompt = `
 사용자의 건강검진 데이터를 기반으로 다음 일주일 동안 실천할 구체적인 '액션 플랜(Action Plan)' 3가지를 생성하라.

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import api from '../api/axios';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Pagination, Navigation } from 'swiper/modules';
 import 'swiper/css';
@@ -22,13 +23,8 @@ export default function HomePage() {
       return;
     }
     try {
-      // 주의: 백엔드 서버 주소와 포트(예: 5000)는 팀 설정에 따라 다를 수 있습니다.
-      const response = await fetch('http://localhost:5000/api/contacts', { 
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, message })
-      });
-      if (response.ok) {
+      const response = await api.post('/contacts', { email, message });
+      if (response.data.success || response.status === 200 || response.status === 201) {
         alert('소중한 의견이 전달되었습니다!');
         setEmail(''); // 입력창 비우기
         setMessage('');
