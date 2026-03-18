@@ -150,6 +150,9 @@ export default function MyPage() {
                         </Link>
                     </motion.div>
                 ) : (
+                    // 리포트 데이터가 있을 때의 대시보드 레이아웃
+                    <div className="grid grid-cols-1 lg:grid-cols-[65%_35%] gap-8 pb-16 items-start">
+                        {/* AI 요약 섹션: 그리드 2열을 모두 차지 */}
                     // 리포트 데이터가 있을 때의 대시보드 레이아웃 (65:35 정밀 분할)
                     <div className="flex flex-col gap-8 pb-16">
                         {/* 상단: AI 코멘트 섹션 (가로 100%) */}
@@ -167,6 +170,18 @@ export default function MyPage() {
                             </p>
                         </motion.div>
 
+ main
+                        {/* 건강 점수 및 리포트 카드 섹션 */}
+                        <div className="h-[450px]">
+                            <HealthScoreCard
+                                score={reportData?.healthRecord?.health_score || 0}
+                                change={5}
+                                status="안정적"
+                            />
+                        </div>
+                        <div className="h-[450px]">
+                            <HealthReportCard selectedYear={selectedYear} />
+                        </div>
                         <div className="grid grid-cols-1 lg:grid-cols-[65%_35%] gap-8">
                             {/* 왼쪽 영역: 핵심 데이터 스트림 (65%) - 높이 1/3씩 3단 구성 */}
                             <div className="flex flex-col gap-8">
