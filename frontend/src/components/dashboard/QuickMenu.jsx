@@ -29,7 +29,7 @@ const QuickMenu = () => {
       <Link 
         to="/profile/edit"
         className="p-3 bg-white rounded-2xl shadow-sm border border-slate-100 hover:bg-teal-50 hover:text-teal-600 transition-all text-slate-400"
-        title="설정"
+        title="회원정보수정"
       >
         <Settings size={20} />
       </Link>

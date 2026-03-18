@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/axios';
 import { motion } from 'framer-motion';
-import { Heart, Loader2, ArrowRight } from 'lucide-react';
+import { Heart, Loader2, ArrowRight, Brain, Droplet, Ruler, Activity } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 // Components
@@ -30,24 +30,22 @@ export default function MyPage() {
     const fetchInitialData = async () => {
         setLoading(true);
         try {
-            // 사용 가능한 검진 연도 목록 API 호출
             const yearsRes = await api.get('/reports/years');
-            if (yearsRes.data.success) {
+            if (yearsRes.data.success && yearsRes.data.data.availableYears.length > 0) {
                 const years = yearsRes.data.data.availableYears;
                 setAvailableYears(years);
+                await fetchReport(years[0]);
+                setSelectedYear(years[0]);
 
-                if (years.length > 0) {
-                    // 최신 연도의 리포트 데이터를 우선적으로 호출
-                    await fetchReport(years[0]);
-                    setSelectedYear(years[0]);
-
-                    // 연도별 점수 히스토리 생성 (데이터 시뮬레이션을 위한 임시 로직)
-                    const mockHistory = years.map((y, i) => ({
-                        date: `${y}년`,
-                        score: 80 + Math.floor(Math.random() * 15)
-                    })).reverse();
-                    setHistory(mockHistory);
-                }
+                const mockHistory = years.map((y, i) => ({
+                    date: `${y}년`,
+                    score: 80 + Math.floor(Math.random() * 15)
+                })).reverse();
+                setHistory(mockHistory);
+            } else {
+                setAvailableYears([]);
+                setReportData(null);
+                setHistory([]);
             }
         } catch (err) {
             console.error('Error fetching dashboard data:', err);
@@ -137,78 +135,105 @@ export default function MyPage() {
                         </Link>
                     </motion.div>
                 ) : (
-                    // 리포트 데이터가 있을 때의 대시보드 레이아웃
-                    <div className="flex flex-col gap-8 pb-16">
-                        {/* 상단: AI 코멘트 섹션 (가로 100%) */}
+                    <>
+                        {/* AI 건강 코멘트 섹션 (상단 핵심 요약) */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="w-full bg-white p-8 rounded-3xl border border-orange-50 shadow-sm"
+                            className="w-full bg-gradient-to-r from-teal-500 to-slate-900 rounded-3xl p-8 mb-8 shadow-2xl relative overflow-hidden group"
                         >
-                            <h3 className="text-sm font-bold text-teal-600 uppercase mb-4 tracking-wider flex items-center gap-2">
-                                <span className="w-2 h-2 bg-teal-500 rounded-full animate-pulse"></span>
-                                AI 건강 코멘트
-                            </h3>
-                            <p className="text-slate-700 text-lg leading-relaxed font-semibold">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20" />
+                            <div className="flex items-center gap-4 mb-4 relative z-10">
+                                <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md animate-pulse">
+                                    <Brain className="text-white" size={24} />
+                                </div>
+                                <h3 className="text-sm font-black text-teal-200 uppercase tracking-[0.3em]">AI Health Comment</h3>
+                            </div>
+                            <p className="text-white text-xl leading-relaxed font-bold relative z-10 drop-shadow-sm">
                                 {reportData?.aiReport?.summary || "건강 데이터 분석 데이터가 충분하지 않습니다."}
                             </p>
                         </motion.div>
 
-                        {/* 그리드 레이아웃 (65:35) */}
-                        <div className="grid grid-cols-1 lg:grid-cols-[65%_35%] gap-8">
-                            {/* 왼쪽 영역: 65% */}
-                            <div className="flex flex-col gap-8">
-                                <div className="h-[400px]">
+                        {/* 그리드 레이아웃 (65:35) - 고정 비율(fr)을 사용하여 오버플로우 방지 */}
+                        <div className="grid grid-cols-1 lg:grid-cols-[6.5fr_3.5fr] gap-8 w-full">
+                            {/* 왼쪽 영역: 65% (핵심 지표 및 트렌드) */}
+                            <div className="flex flex-col gap-8 h-full">
+                                <div className="h-[420px]">
                                     <HealthScoreCard
                                         score={reportData?.healthRecord?.health_score || 0}
-                                        change={5}
-                                        status="안정적"
+                                        prevScore={78} // 전월 데이터 연동 전 임시값
                                     />
                                 </div>
-                                <div className="h-[400px]">
+                                <div className="h-[420px]">
                                     <HealthTrendChart history={history} />
                                 </div>
-                                <motion.div 
+                                <motion.div
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    className="h-[400px] bg-white p-8 rounded-3xl border border-orange-100 shadow-sm flex flex-col"
+                                    className="h-[420px] bg-white p-8 rounded-3xl border border-orange-100 shadow-sm flex flex-col group relative overflow-hidden"
                                 >
-                                    <div className="flex justify-between items-center mb-6">
-                                        <h3 className="text-xl font-black text-slate-900">상세 건강 지표</h3>
-                                        <span className="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1 rounded-full uppercase">Details</span>
+                                    <div className="absolute top-0 left-0 w-32 h-32 bg-orange-50/50 rounded-full blur-3xl -ml-16 -mt-16 group-hover:bg-orange-100/60 transition-colors duration-500" />
+                                    <div className="flex justify-between items-center mb-8 relative z-10">
+                                        <h3 className="text-xl font-black text-slate-900 flex items-center gap-3">
+                                            상세 건강 지표
+                                            <span className="text-[10px] font-black tracking-widest text-slate-400 bg-slate-50 px-2.5 py-1 rounded-full uppercase">Details</span>
+                                        </h3>
                                     </div>
-                                    <div className="flex-1 grid grid-cols-2 gap-4">
-                                        <div className="bg-orange-50/50 rounded-2xl p-5 border border-orange-100/50 flex flex-col justify-center">
-                                            <p className="text-xs font-bold text-slate-400 mb-1">혈압</p>
-                                            <p className="text-2xl font-black text-slate-900">{reportData?.healthRecord?.blood_pressure_s}/{reportData?.healthRecord?.blood_pressure_d} <span className="text-sm font-medium text-slate-500">mmHg</span></p>
+                                    <div className="flex-1 grid grid-cols-2 gap-4 relative z-10">
+                                        <div className="bg-orange-50/40 rounded-2xl p-6 border border-orange-200/30 flex flex-col justify-between hover:bg-orange-50 transition-colors group/item">
+                                            <div className="flex justify-between items-start">
+                                                <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest">혈압 (BP)</p>
+                                                <Heart className="text-orange-300 group-hover/item:text-orange-500 transition-colors" size={18} />
+                                            </div>
+                                            <p className="text-3xl font-black text-slate-900 mt-2 tracking-tighter">
+                                                {reportData?.healthRecord?.blood_pressure_s}/{reportData?.healthRecord?.blood_pressure_d}
+                                                <span className="text-xs font-bold text-slate-400 ml-2 uppercase">mmHg</span>
+                                            </p>
                                         </div>
-                                        <div className="bg-teal-50/50 rounded-2xl p-5 border border-teal-100/50 flex flex-col justify-center">
-                                            <p className="text-xs font-bold text-slate-400 mb-1">공복 혈당</p>
-                                            <p className="text-2xl font-black text-slate-900">{reportData?.healthRecord?.fasting_glucose} <span className="text-sm font-medium text-slate-500">mg/dL</span></p>
+                                        <div className="bg-teal-50/40 rounded-2xl p-6 border border-teal-200/30 flex flex-col justify-between hover:bg-teal-50 transition-colors group/item">
+                                            <div className="flex justify-between items-start">
+                                                <p className="text-[10px] font-black text-teal-400 uppercase tracking-widest">공복 혈당 (FPG)</p>
+                                                <Droplet className="text-teal-300 group-hover/item:text-teal-500 transition-colors" size={18} />
+                                            </div>
+                                            <p className="text-3xl font-black text-slate-900 mt-2 tracking-tighter">
+                                                {reportData?.healthRecord?.fasting_glucose}
+                                                <span className="text-xs font-bold text-slate-400 ml-2 uppercase">mg/dL</span>
+                                            </p>
                                         </div>
-                                        <div className="bg-blue-50/50 rounded-2xl p-5 border border-blue-100/50 flex flex-col justify-center">
-                                            <p className="text-xs font-bold text-slate-400 mb-1">허리둘레</p>
-                                            <p className="text-2xl font-black text-slate-900">{reportData?.healthRecord?.waist} <span className="text-sm font-medium text-slate-500">cm</span></p>
+                                        <div className="bg-blue-50/40 rounded-2xl p-6 border border-blue-200/30 flex flex-col justify-between hover:bg-blue-50 transition-colors group/item">
+                                            <div className="flex justify-between items-start">
+                                                <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">허리둘레 (Waist)</p>
+                                                <Ruler className="text-blue-300 group-hover/item:text-blue-500 transition-colors" size={18} />
+                                            </div>
+                                            <p className="text-3xl font-black text-slate-900 mt-2 tracking-tighter">
+                                                {reportData?.healthRecord?.waist}
+                                                <span className="text-xs font-bold text-slate-400 ml-2 uppercase">cm</span>
+                                            </p>
                                         </div>
-                                        <div className="bg-purple-50/50 rounded-2xl p-5 border border-purple-100/50 flex flex-col justify-center">
-                                            <p className="text-xs font-bold text-slate-400 mb-1">체질량지수 (BMI)</p>
-                                            <p className="text-2xl font-black text-slate-900">{reportData?.healthRecord?.bmi} <span className="text-sm font-medium text-slate-500">kg/㎡</span></p>
+                                        <div className="bg-purple-50/40 rounded-2xl p-6 border border-purple-200/30 flex flex-col justify-between hover:bg-purple-50 transition-colors group/item">
+                                            <div className="flex justify-between items-start">
+                                                <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest">체질량지수 (BMI)</p>
+                                                <Activity className="text-purple-300 group-hover/item:text-purple-500 transition-colors" size={18} />
+                                            </div>
+                                            <p className="text-3xl font-black text-slate-900 mt-2 tracking-tighter">
+                                                {reportData?.healthRecord?.bmi}
+                                                <span className="text-xs font-bold text-slate-400 ml-2 uppercase">kg/㎡</span>
+                                            </p>
                                         </div>
                                     </div>
                                 </motion.div>
                             </div>
 
-                            {/* 오른쪽 영역: 35% */}
                             <div className="flex flex-col gap-8">
-                                <div className="h-[620px]">
+                                <div className="h-[646px]">
                                     <HealthReportCard selectedYear={selectedYear} />
                                 </div>
-                                <div className="h-[620px]">
+                                <div className="h-[646px]">
                                     <ActionPlanCard />
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </>
                 )}
             </div>
 
