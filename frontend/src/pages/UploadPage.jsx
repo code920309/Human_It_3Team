@@ -36,51 +36,142 @@ export default function UploadPage() {
     setUploading(true);
     try {
       if (file && !analysisDone) {
-        // Step 1: AI 분석(OCR)
-        console.log('🚀 Step 1: AI 분석 시작...');
-        const formData = new FormData();
-        formData.append('reportFile', file);
-        formData.append('year', year);
+        // Step 1: AI 분석(OCR) - 프론트엔드 직접 분석으로 변경 (서버리스 Timeout 방지)
+        console.log('🚀 Step 1: 프론트엔드 전용 AI 분석 시작...');
+        
+        let targetAge = guestAge;
+        let targetGender = guestGender;
 
-        if (!user) {
-          if (!guestName || !guestAge) {
-            alert(t.guestMissingInfo);
-            setUploading(false);
-            return;
-          }
-          formData.append('age', guestAge);
-          formData.append('gender', guestGender);
-        }
-        formData.append('lang', lang);
-
-        const endpoint = user ? '/reports/analyze' : '/reports/analyze-guest';
-        const res = await api.post(endpoint, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-
-        console.log('📊 분석 결과:', res.data);
-
-        if (res.data.success) {
-          const extracted = res.data.data.healthRecord;
-          setManualData({
-            height: extracted.height || '',
-            weight: extracted.weight || '',
-            waist: extracted.waist || '',
-            bpSys: extracted.bpSys || '',
-            bpDia: extracted.bpDia || '',
-            glucose: extracted.glucose || '',
-            tg: extracted.tg || '',
-            hdl: extracted.hdl || '',
-            ldl: extracted.ldl || '',
-            ast: extracted.ast || '',
-            alt: extracted.alt || '',
-            gammaGtp: extracted.gammaGtp || ''
-          });
-          setAiReport(res.data.data.aiReport);
-          setAnalysisDone(true);
-          console.log('✅ AI 분석 완료! 이제 "최종 데이터 확인 및 저장" 버튼을 클릭하세요.');
+        if (user) {
+           if (user.birth_date) {
+               targetAge = new Date().getFullYear() - new Date(user.birth_date).getFullYear();
+           } else {
+               targetAge = '알수없음';
+           }
+           targetGender = user.gender || 'M';
         } else {
-          throw new Error(res.data.message || 'AI 분석 실패');
+           if (!guestName || !guestAge) {
+               alert(t.guestMissingInfo);
+               setUploading(false);
+               return;
+           }
+        }
+
+        try {
+            // 동적 라우팅으로 AI SDK 불러오기
+            const { GoogleGenerativeAI } = await import('@google/generative-ai');
+            const apiKey = process.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY;
+            
+            if (!apiKey) throw new Error('GEMINI_API_KEY가 설정되지 않았습니다.');
+            
+            const genAI = new GoogleGenerativeAI(apiKey);
+            
+            // [수정: 일일 분석 횟수 제한 (소프트 락)]
+            // 무지성 매크로나 과도한 업로드로 인한 API 과금을 막기 위해 로컬스토리지에 하루 5회 제한을 둡니다.
+            const todayStr = new Date().toISOString().split('T')[0];
+            const usageInfo = JSON.parse(localStorage.getItem('ai_usage_limit') || '{}');
+            if (usageInfo.date !== todayStr) {
+                usageInfo.date = todayStr;
+                usageInfo.count = 0;
+            }
+            if (usageInfo.count >= 5) {
+                alert("[일일 제한 초과] 하루 최대 5회까지만 AI 분석 무료 이용이 가능합니다. 내일 다시 시도해주세요.");
+                setUploading(false);
+                return;
+            }
+
+            // 최신 안정 모델 사용 (SDK 버전에 맞는 gemini-2.5-flash 적용)
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+            // [수정: 이미지 원본 압축 로직 (PDF 제외)]
+            // 고해상도 이미지가 프론트엔드 메모리와 엄청난 구글 AI 토큰을 갉아먹는 것을 막기 위해 Canvas로 압축(Resize)합니다.
+            const processFileForAI = (fileObj) => new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const isPDF = fileObj.type === 'application/pdf' || fileObj.type === 'application/haansoftpdf';
+                    if (isPDF) {
+                        // PDF는 브라우저 단독으로 압축하면 깨지거나 오류 날 가능성이 크므로 원본 그대로 보냅니다.
+                        resolve({
+                            data: reader.result.split(',')[1],
+                            mimeType: 'application/pdf'
+                        });
+                    } else if (fileObj.type.startsWith('image/')) {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const MAX_DIMENSION = 1500; // 가로세로 최대 1500px로 제한하여 토큰 대폭 절약
+                            let { width, height } = img;
+
+                            if (width > height && width > MAX_DIMENSION) {
+                                height = Math.floor(height * (MAX_DIMENSION / width));
+                                width = MAX_DIMENSION;
+                            } else if (height > MAX_DIMENSION) {
+                                width = Math.floor(width * (MAX_DIMENSION / height));
+                                height = MAX_DIMENSION;
+                            }
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+                            // 품질 80%의 JPEG로 강제 변환하여 용량(토큰) 최소화
+                            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                            resolve({
+                                data: dataUrl.split(',')[1],
+                                mimeType: 'image/jpeg'
+                            });
+                        };
+                        img.onerror = () => reject(new Error("이미지 변환 중 오류 발생"));
+                        img.src = reader.result;
+                    } else {
+                        reject(new Error("지원하지 않는 형식입니다."));
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(fileObj);
+            });
+
+            const processedPart = await processFileForAI(file);
+            const imagePart = { inlineData: processedPart };
+
+            const isEn = lang === 'en';
+            const systemPrompt = isEn
+               ? `CareLink AI: Extract health data from image. User: ${targetAge}y, ${targetGender}. Output JSON ONLY: {healthRecord: {height,weight,waist,bpSys,bpDia,glucose,tg,hdl,ldl,ast,alt,gammaGtp,bmi}, aiReport: {summary,medicalRecommendation,riskOverview[],organStatus:{heart,liver,pancreas,abdomen,vessels},healthScore}}. Use null if missing.`
+               : `CareLink AI: 건강검진 분석. 사용자: ${targetAge}세, ${targetGender}. 반드시 JSON 형식으로만 응답: {healthRecord: {height,weight,waist,bpSys,bpDia,glucose,tg,hdl,ldl,ast,alt,gammaGtp,bmi}, aiReport: {summary,medicalRecommendation,riskOverview[],organStatus:{heart,liver,pancreas,abdomen,vessels},healthScore}}. 수치 없으면 null 표시.`;
+
+            const result = await model.generateContent([systemPrompt, imagePart]);
+            const responseText = result.response.text();
+            
+            let data = null;
+            const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+            if (jsonMatch) data = JSON.parse(jsonMatch[0]);
+
+            if (!data || !data.healthRecord) throw new Error('AI 구조 파싱 실패. 다시 시도해주세요.');
+
+            // [수정: 정상 분석 완료 시 횟수 1 증가 저장]
+            usageInfo.count += 1;
+            localStorage.setItem('ai_usage_limit', JSON.stringify(usageInfo));
+
+            const extracted = data.healthRecord || {};
+            setManualData({
+              height: extracted.height || '',
+              weight: extracted.weight || '',
+              waist: extracted.waist || '',
+              bpSys: extracted.bpSys || '',
+              bpDia: extracted.bpDia || '',
+              glucose: extracted.glucose || '',
+              tg: extracted.tg || '',
+              hdl: extracted.hdl || '',
+              ldl: extracted.ldl || '',
+              ast: extracted.ast || '',
+              alt: extracted.alt || '',
+              gammaGtp: extracted.gammaGtp || ''
+            });
+            setAiReport(data.aiReport);
+            setAnalysisDone(true);
+            console.log('✅ 프론트엔드 직접 AI 분석 성공!');
+        } catch (aiErr) {
+            console.error('AI 분석 에러:', aiErr);
+            throw new Error(`분석 실패: ${aiErr.message}`);
         }
       } else {
         // Step 2: 데이터 최종 저장

@@ -143,8 +143,10 @@ const ChatWidget = () => {
         }));
 
       // Find the first 'user' message and slice from there
+      // [수정: 눈덩이 토큰 누수 방지 필터]
+      // 이전 대화를 무한정 보내면 토큰 요금이 폭발하므로 가장 최근 대화 8마디까지만 슬라이싱합니다.
       const firstUserIndex = historyForChat.findIndex(m => m.role === 'user');
-      const validHistory = firstUserIndex !== -1 ? historyForChat.slice(firstUserIndex).slice(-6) : [];
+      const validHistory = firstUserIndex !== -1 ? historyForChat.slice(firstUserIndex).slice(-8) : [];
 
       const chat = model.startChat({
         history: validHistory,

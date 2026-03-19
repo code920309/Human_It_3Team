@@ -12,23 +12,8 @@ const chatbotRoutes = require('./routes/chatbotRoutes');
 const actionPlanRoutes = require('./routes/actionPlanRoutes');
 const reviewRoutes = require('./routes/reviewRoutes'); //리뷰 담당 라우터 불러오기
 
-const fs = require('fs');
-const path = require('path');
-const logDir = path.join(__dirname, '../logs');
-if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
-
-app.use((req, res, next) => {
-    const log = `[${new Date().toISOString()}] ${req.method} ${req.url}\n`;
-    fs.appendFileSync(path.join(logDir, 'access.log'), log);
-    next();
-});
-
-// Mock Error Logger
-app.use((err, req, res, next) => {
-    const log = `[${new Date().toISOString()}] ERROR: ${err.message}\n${err.stack}\n`;
-    fs.appendFileSync(path.join(logDir, 'error.log'), log);
-    next(err);
-});
+// [수정] AWS Lambda(Netlify)의 읽기 전용 파일 시스템(EROFS) 에러를 방지하기 위해 파일 로그 기록 제거.
+// Netlify Functions 환경에서는 console.log / console.error 만으로도 대시보드에 로그가 영구 기록됩니다.
 
 // [보안] CORS 설정 - credentials 허용
 app.use(cors({

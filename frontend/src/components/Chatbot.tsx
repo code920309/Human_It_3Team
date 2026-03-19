@@ -59,8 +59,22 @@ export default function Chatbot() {
     setIsLoading(true);
 
     try {
+      // [수정: 눈덩이 토큰 방지 및 Gemini API 호환성 보호 필터]
+      // 구글 AI는 명확히 사용자와 모델의 1:1 대화 교차(Alternating)를 요구하며 무조건 'user'로 시작해야 합니다.
+      // 맨 처음 환영 메시지(assistant)가 history의 선두가 되는 버그를 막기 위해 user 인덱스를 찾습니다.
+      const firstUserIndex = messages.findIndex(m => m.role === 'user');
+      const validMessages = firstUserIndex !== -1 ? messages.slice(firstUserIndex) : [];
+      
+      const historyThreshold = validMessages
+        .slice(-8)
+        .map(m => ({
+          role: m.role === 'assistant' ? 'model' : 'user', // SDK 스펙에 맞게 역할 변환
+          parts: [{ text: m.content }]
+        }));
+
       const chat = ai.chats.create({
         model: "gemini-2.5-flash",
+        history: historyThreshold,
         config: {
           systemInstruction: `당신은 'CareLink'의 전문 건강 상담 AI 비서입니다. 
           사용자의 건강검진 결과를 분석하고 맞춤형 건강 가이드(식단, 운동, 생활 습관)를 제공하는 것이 주 목적입니다.
@@ -169,7 +183,7 @@ export default function Chatbot() {
       }
 
       const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: "gemini-2.5-flash",
         contents: { parts },
         config: {
           systemInstruction: `당신은 'CareLink'의 전문 건강 상담 AI 비서입니다. 

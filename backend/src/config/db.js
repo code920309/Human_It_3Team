@@ -11,7 +11,14 @@ if (process.env.DATABASE_URL) {
     console.log('--- Connecting to Supabase (PostgreSQL) ---');
     pool = new Pool({
         connectionString: process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false }
+        ssl: { rejectUnauthorized: false },
+        connectionTimeoutMillis: 3000, // 502 타임아웃 방지용 빠른 실패
+        idleTimeoutMillis: 10000,      // Serverless 환경의 좀비 커넥션 방지
+        max: 5                         // 람다 한계치 최적화
+    });
+    // 데이터베이스 연결 유효성 즉시 검사
+    pool.on('error', (err) => {
+        console.error('🚨 [오류] PostgreSQL 연결 중 치명적 에러 발생:', err.message);
     });
     isPostgres = true;
 } else {
