@@ -10,7 +10,7 @@ const env = require('../config/env');
  * ========================================================== */
 
 // 1. 전역 설정 (모델명 및 기본 구성)
-const MODEL_NAME = "gemini-flash-latest"; // 대표님 환경에서 가용 확인된 모델명으로 복구
+const MODEL_NAME = "gemini-2.5-flash"; // 최신 가용 모델명으로 업데이트 (1.5 모델명은 404 발생)
 let currentKeyIndex = 0;
 
 /**

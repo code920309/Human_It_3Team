@@ -169,7 +169,7 @@ export default function Chatbot() {
       }
 
       const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: "gemini-2.5-flash",
         contents: { parts },
         config: {
           systemInstruction: `당신은 'CareLink'의 전문 건강 상담 AI 비서입니다. 

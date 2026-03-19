@@ -65,8 +65,8 @@ export default function UploadPage() {
             if (!apiKey) throw new Error('GEMINI_API_KEY가 설정되지 않았습니다.');
             
             const genAI = new GoogleGenerativeAI(apiKey);
-            // 최신 안정 모델 사용 (gemini-flash-latest라는 이름 오류 방지)
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            // 최신 안정 모델 사용 (SDK 버전에 맞는 gemini-2.5-flash 적용)
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
             const fileToBase64 = (fileObj) => new Promise((resolve, reject) => {
                 const reader = new FileReader();
