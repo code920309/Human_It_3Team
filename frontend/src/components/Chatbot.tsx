@@ -59,10 +59,13 @@ export default function Chatbot() {
     setIsLoading(true);
 
     try {
-      // [수정: 눈덩이 토큰 방지를 위한 대화 기록(Context) 절단 필터]
-      // 에러 메시지를 제외한 과거 대화 중 '최근 8마디'만 잘라내어 AI에게 전송합니다.
-      const historyThreshold = messages
-        .filter(m => !m.isError)
+      // [수정: 눈덩이 토큰 방지 및 Gemini API 호환성 보호 필터]
+      // 구글 AI는 명확히 사용자와 모델의 1:1 대화 교차(Alternating)를 요구하며 무조건 'user'로 시작해야 합니다.
+      // 맨 처음 환영 메시지(assistant)가 history의 선두가 되는 버그를 막기 위해 user 인덱스를 찾습니다.
+      const firstUserIndex = messages.findIndex(m => m.role === 'user');
+      const validMessages = firstUserIndex !== -1 ? messages.slice(firstUserIndex) : [];
+      
+      const historyThreshold = validMessages
         .slice(-8)
         .map(m => ({
           role: m.role === 'assistant' ? 'model' : 'user', // SDK 스펙에 맞게 역할 변환
