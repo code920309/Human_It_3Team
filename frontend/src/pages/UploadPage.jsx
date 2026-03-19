@@ -65,19 +65,73 @@ export default function UploadPage() {
             if (!apiKey) throw new Error('GEMINI_API_KEY가 설정되지 않았습니다.');
             
             const genAI = new GoogleGenerativeAI(apiKey);
+            
+            // [수정: 일일 분석 횟수 제한 (소프트 락)]
+            // 무지성 매크로나 과도한 업로드로 인한 API 과금을 막기 위해 로컬스토리지에 하루 5회 제한을 둡니다.
+            const todayStr = new Date().toISOString().split('T')[0];
+            const usageInfo = JSON.parse(localStorage.getItem('ai_usage_limit') || '{}');
+            if (usageInfo.date !== todayStr) {
+                usageInfo.date = todayStr;
+                usageInfo.count = 0;
+            }
+            if (usageInfo.count >= 5) {
+                alert("[일일 제한 초과] 하루 최대 5회까지만 AI 분석 무료 이용이 가능합니다. 내일 다시 시도해주세요.");
+                setUploading(false);
+                return;
+            }
+
             // 최신 안정 모델 사용 (SDK 버전에 맞는 gemini-2.5-flash 적용)
             const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-            const fileToBase64 = (fileObj) => new Promise((resolve, reject) => {
+            // [수정: 이미지 원본 압축 로직 (PDF 제외)]
+            // 고해상도 이미지가 프론트엔드 메모리와 엄청난 구글 AI 토큰을 갉아먹는 것을 막기 위해 Canvas로 압축(Resize)합니다.
+            const processFileForAI = (fileObj) => new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                reader.onloadend = () => {
+                    const isPDF = fileObj.type === 'application/pdf' || fileObj.type === 'application/haansoftpdf';
+                    if (isPDF) {
+                        // PDF는 브라우저 단독으로 압축하면 깨지거나 오류 날 가능성이 크므로 원본 그대로 보냅니다.
+                        resolve({
+                            data: reader.result.split(',')[1],
+                            mimeType: 'application/pdf'
+                        });
+                    } else if (fileObj.type.startsWith('image/')) {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const MAX_DIMENSION = 1500; // 가로세로 최대 1500px로 제한하여 토큰 대폭 절약
+                            let { width, height } = img;
+
+                            if (width > height && width > MAX_DIMENSION) {
+                                height = Math.floor(height * (MAX_DIMENSION / width));
+                                width = MAX_DIMENSION;
+                            } else if (height > MAX_DIMENSION) {
+                                width = Math.floor(width * (MAX_DIMENSION / height));
+                                height = MAX_DIMENSION;
+                            }
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+                            // 품질 80%의 JPEG로 강제 변환하여 용량(토큰) 최소화
+                            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                            resolve({
+                                data: dataUrl.split(',')[1],
+                                mimeType: 'image/jpeg'
+                            });
+                        };
+                        img.onerror = () => reject(new Error("이미지 변환 중 오류 발생"));
+                        img.src = reader.result;
+                    } else {
+                        reject(new Error("지원하지 않는 형식입니다."));
+                    }
+                };
                 reader.onerror = reject;
                 reader.readAsDataURL(fileObj);
             });
 
-            const base64Data = await fileToBase64(file);
-            const mimeType = file.type === 'application/haansoftpdf' ? 'application/pdf' : file.type;
-            const imagePart = { inlineData: { data: base64Data, mimeType } };
+            const processedPart = await processFileForAI(file);
+            const imagePart = { inlineData: processedPart };
 
             const isEn = lang === 'en';
             const systemPrompt = isEn
@@ -92,6 +146,10 @@ export default function UploadPage() {
             if (jsonMatch) data = JSON.parse(jsonMatch[0]);
 
             if (!data || !data.healthRecord) throw new Error('AI 구조 파싱 실패. 다시 시도해주세요.');
+
+            // [수정: 정상 분석 완료 시 횟수 1 증가 저장]
+            usageInfo.count += 1;
+            localStorage.setItem('ai_usage_limit', JSON.stringify(usageInfo));
 
             const extracted = data.healthRecord || {};
             setManualData({

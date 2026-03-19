@@ -59,8 +59,19 @@ export default function Chatbot() {
     setIsLoading(true);
 
     try {
+      // [수정: 눈덩이 토큰 방지를 위한 대화 기록(Context) 절단 필터]
+      // 에러 메시지를 제외한 과거 대화 중 '최근 8마디'만 잘라내어 AI에게 전송합니다.
+      const historyThreshold = messages
+        .filter(m => !m.isError)
+        .slice(-8)
+        .map(m => ({
+          role: m.role === 'assistant' ? 'model' : 'user', // SDK 스펙에 맞게 역할 변환
+          parts: [{ text: m.content }]
+        }));
+
       const chat = ai.chats.create({
         model: "gemini-2.5-flash",
+        history: historyThreshold,
         config: {
           systemInstruction: `당신은 'CareLink'의 전문 건강 상담 AI 비서입니다. 
           사용자의 건강검진 결과를 분석하고 맞춤형 건강 가이드(식단, 운동, 생활 습관)를 제공하는 것이 주 목적입니다.

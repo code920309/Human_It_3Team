@@ -126,7 +126,9 @@ export default function ChatbotPage() {
               if (firstUserIndex === -1) return false;
               return i >= firstUserIndex;
             })
-            .slice(-10),
+            // [수정: 눈덩이 토큰 누수 방지 필터]
+            // 가장 최근 사용자-AI 대화 8마디까지만 기억하여 기하급수적 요금 폭탄을 막습니다.
+            .slice(-8),
           generationConfig: {
             maxOutputTokens: 1000,
           },
