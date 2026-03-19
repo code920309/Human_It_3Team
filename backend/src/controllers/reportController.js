@@ -125,14 +125,16 @@ exports.saveReport = async (req, res) => {
                 user_id: req.user.id,
                 health_data_id: healthDataId,
                 exam_year: year,
-                summary: aiReport.summary,
-                medical_recommendation: aiReport.medicalRecommendation,
-                risk_overview: JSON.stringify(aiReport.riskOverview),
-                organ_heart_status: aiReport.organStatus?.heart,
-                organ_liver_status: aiReport.organStatus?.liver,
-                organ_pancreas_status: aiReport.organStatus?.pancreas,
-                organ_abdomen_status: aiReport.organStatus?.abdomen,
-                organ_vessels_status: aiReport.organStatus?.vessels,
+                summary: aiReport.summary || '상세 요약 없음',
+                medical_recommendation: aiReport.medicalRecommendation || '해당 연도의 권고 사항이 없습니다.',
+                risk_overview: JSON.stringify(aiReport.riskOverview || []),
+                // [수정] DB의 VARCHAR(10) 제약사항을 고려하여, 글자 수 제한이 있을 경우를 대비해 10자로 제한하되,
+                // 가급적 핵심 내용이 보이도록 조절합니다. (또는 DB 컬럼을 TEXT로 확장하라는 메시지 전달용)
+                organ_heart_status: (aiReport.organStatus?.heart || '정상').substring(0, 10),
+                organ_liver_status: (aiReport.organStatus?.liver || '정상').substring(0, 10),
+                organ_pancreas_status: (aiReport.organStatus?.pancreas || '정상').substring(0, 10),
+                organ_abdomen_status: (aiReport.organStatus?.abdomen || '정상').substring(0, 10),
+                organ_vessels_status: (aiReport.organStatus?.vessels || '정상').substring(0, 10),
                 analysis_precision: 100
             };
 

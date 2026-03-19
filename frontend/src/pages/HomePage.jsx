@@ -135,7 +135,7 @@ export default function HomePage() {
                 <Languages className="w-4 h-4" />
                 {lang === 'ko' ? 'English' : '한국어'}
               </button>
-              
+
               {isAuthenticated ? (
                 <>
                   <Link to="/mypage" className="text-slate-600 hover:text-teal-600 transition-colors font-semibold">{t.mypage}</Link>
@@ -233,18 +233,18 @@ export default function HomePage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {t.reviews.map((defaultReview, i) => {
-              const reviewData = publicReviews[i] 
+              const reviewData = publicReviews[i]
                 ? { name: "익명", text: publicReviews[i].content, rating: publicReviews[i].rating }
                 : defaultReview;
-                
+
               return (
                 <div key={i} className="bg-white p-8 rounded-xl shadow-sm border border-orange-50 hover:shadow-md transition-shadow flex flex-col justify-between">
                   <div>
                     <div className="flex text-amber-400 mb-4">
                       {[1, 2, 3, 4, 5].map((starValue) => (
-                        <Star 
-                          key={starValue} 
-                          className={`w-4 h-4 ${starValue <= reviewData.rating ? 'fill-current' : 'fill-transparent text-slate-300'}`} 
+                        <Star
+                          key={starValue}
+                          className={`w-4 h-4 ${starValue <= reviewData.rating ? 'fill-current' : 'fill-transparent text-slate-300'}`}
                         />
                       ))}
                     </div>
@@ -296,7 +296,7 @@ export default function HomePage() {
             <div className="w-full max-w-5xl mx-auto">
               <iframe
                 className="w-full aspect-video"
-                src="https://www.youtube.com/embed/yHY5bhh9JLk?si=at7MAVHObW7zx-uZ"
+                src="https://www.youtube.com/embed/i5qxRcJus6I?si=mH8GRc4Bk8H9FLO_"
                 title="YouTube video player"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 referrerPolicy="strict-origin-when-cross-origin"

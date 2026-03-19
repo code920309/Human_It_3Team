@@ -54,6 +54,9 @@ module.exports = {
     DATABASE_URL: process.env.DATABASE_URL,
     JWT_SECRET: process.env.JWT_SECRET || 'carelink_default_secret',
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-    // (선택) 여러 개의 API 키가 있을 경우 배열로 변환
-    GEMINI_API_KEYS: process.env.GEMINI_API_KEYS ? process.env.GEMINI_API_KEYS.split(',') : [process.env.GEMINI_API_KEY]
+    // [수정] GEMINI_API_KEY에 쉼표가 있을 경우를 대비하여 파싱 및 공백 제거 로직 추가
+    GEMINI_API_KEYS: (process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || '')
+        .split(',')
+        .map(key => key.trim())
+        .filter(key => key !== '')
 };

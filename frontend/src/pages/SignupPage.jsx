@@ -105,8 +105,8 @@ export default function SignupPage() {
 
         if (loginRes.data.success) {
           // AuthContext에 로그인 정보를 넘겨 전역 로그인 상태로 전환
-          // Human_It의 login 함수는 (token, user, keepLoggedIn) 형태
-          login(loginRes.data.accessToken, loginRes.data.user, true);
+          // [수정] 백엔드 응답 필드명인 'token'으로 변경
+          login(loginRes.data.token, loginRes.data.user, true);
 
           // 3. 비회원 분석 기록이 있다면 가입된 계정으로 저장(Save) 시도
           if (location.state?.guestData && location.state?.aiReport) {

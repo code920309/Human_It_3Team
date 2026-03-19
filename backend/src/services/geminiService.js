@@ -10,7 +10,7 @@ const env = require('../config/env');
  * ========================================================== */
 
 // 1. 전역 설정 (모델명 및 기본 구성)
-const MODEL_NAME = "gemini-flash-latest"; // 할당량 문제가 있는 2.0 대신 1.5 기반의 가장 안정적인 최신 모델로 우회 (1.5 Flash 최신 버전)
+const MODEL_NAME = "gemini-flash-latest"; // 대표님 환경에서 가용 확인된 모델명으로 복구
 let currentKeyIndex = 0;
 
 /**
