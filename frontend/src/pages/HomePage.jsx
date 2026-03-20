@@ -358,7 +358,7 @@ export default function HomePage() {
             <div className="w-full max-w-5xl mx-auto">
               <iframe
                 className="w-full aspect-video"
-                src="https://www.youtube.com/embed/yHY5bhh9JLk?si=at7MAVHObW7zx-uZ"
+                src="https://www.youtube.com/embed/i5qxRcJus6I?si=Cbus_MC5Ech5uWSi"
                 title="YouTube video player"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 referrerPolicy="strict-origin-when-cross-origin"
