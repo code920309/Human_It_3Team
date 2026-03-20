@@ -126,44 +126,52 @@ const ChatWidget = () => {
       }
     }
 
-    // Fallback to Frontend Gemini
+    // Fallback to Frontend Gemini or Silent Mock
     try {
-      console.log("ChatWidget: Attempting Frontend Gemini fallback...");
-      console.log("API Key loaded (first 5):", GEMINI_API_KEY ? GEMINI_API_KEY.substring(0, 5) : "MISSING");
-      
       if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is missing");
 
-      const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
-      const chat = model.startChat({
-        history: messages
-          .filter(m => m.role === 'user' || m.role === 'assistant')
-          .map(m => ({
-            role: m.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: m.content }]
-          }))
-          .filter((m, i, arr) => {
-            const firstUserIndex = arr.findIndex(msg => msg.role === 'user');
-            if (firstUserIndex === -1) return false;
-            return i >= firstUserIndex;
-          })
-          .slice(-6),
+      const model = ai.getGenerativeModel({ 
+        model: "gemini-2.5-flash",
+        systemInstruction: "당신은 CareLink의 전문 건강 상담 AI입니다. 사용자의 질문에 대해 전문적이고 친절하게 답변해주세요."
       });
-      const result = await chat.sendMessage(messageText);
-      const text = result.response.text();
       
+      const historyForChat = messages
+        .filter(m => m.role === 'user' || m.role === 'assistant')
+        .map(m => ({
+          role: m.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: m.content }]
+        }));
+
+      // Find the first 'user' message and slice from there
+      // [수정: 눈덩이 토큰 누수 방지 필터]
+      // 이전 대화를 무한정 보내면 토큰 요금이 폭발하므로 가장 최근 대화 8마디까지만 슬라이싱합니다.
+      const firstUserIndex = historyForChat.findIndex(m => m.role === 'user');
+      const validHistory = firstUserIndex !== -1 ? historyForChat.slice(firstUserIndex).slice(-8) : [];
+
+      const chat = model.startChat({
+        history: validHistory,
+      });
+      
+      const result = await chat.sendMessage(messageText);
       const assistantMessage = {
-        id: `${Date.now()}-ai-fallback`,
+        id: `${Date.now()}-ai-direct`,
         role: 'assistant',
-        content: text + (token ? "\n\n*(주의: 서버 연결 문제로 오프라인 모드로 응답했습니다.)*" : "\n\n*(안내: 로그인 하시면 내 검진 데이터를 기반으로 맞춤 상담을 받으실 수 있습니다.)*"),
+        content: result.response.text(),
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, assistantMessage]);
     } catch (fallbackError) {
-      console.error("ChatWidget: Fallback Error:", fallbackError.message);
+      const errorMessage = fallbackError.message || "";
+      let userFriendlyMessage = "현재 AI 연결에 일시적인 장애가 발생했습니다. 잠시 후 다시 질문해 주시면 최선을 다해 답변해 드리겠습니다.";
+      
+      if (errorMessage.includes("403") || errorMessage.includes("API key not valid") || errorMessage.includes("PERMISSION_DENIED")) {
+        userFriendlyMessage = "제미나이 서버 통신은 성공했으나, 현재 설정된 API 키가 구글(Google) 서버에서 거절(403 Forbidden)되었습니다. .env 파일에 새롭게 발급받은 정상적인 API 키를 넣어주시면 제미나이가 바로 대답합니다!";
+      }
+
       setMessages(prev => [...prev, {
         id: `${Date.now()}-error`,
         role: 'assistant',
-        content: "현재 AI 비서가 응답할 수 없는 상태입니다. 잠시 후 다시 시도해주세요.",
+        content: userFriendlyMessage,
         timestamp: new Date(),
         isError: true
       }]);
@@ -269,7 +277,7 @@ const ChatWidget = () => {
   };
 
   return (
-    <div className="fixed top-24 right-6 z-[9999] flex flex-col items-end gap-3 pointer-events-none">
+    <div className="fixed bottom-6 right-6 z-[9999] flex flex-col-reverse items-end gap-3 pointer-events-none">
       {/* Floating Toggle Button */}
       <motion.button
         initial={{ scale: 0, opacity: 0 }}
@@ -291,7 +299,7 @@ const ChatWidget = () => {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.9, transformOrigin: 'top right' }}
+            initial={{ opacity: 0, y: 20, scale: 0.9, transformOrigin: 'bottom right' }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             className="pointer-events-auto w-[350px] sm:w-[420px] h-[520px] bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100 flex flex-col overflow-hidden glass-effect"

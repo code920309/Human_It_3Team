@@ -21,11 +21,20 @@ const storage = isLocalStorageAvailable
     : multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
-    const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+    // [최적화] 허용 파일 형식 확장 (한컴 PDF 및 최신 이미지 형식 포함)
+    const allowedTypes = [
+        'image/jpeg', 
+        'image/png', 
+        'image/webp', 
+        'image/gif', 
+        'application/pdf', 
+        'application/haansoftpdf'
+    ];
+
     if (allowedTypes.includes(file.mimetype)) {
         cb(null, true);
     } else {
-        cb(new Error('지원하지 않는 파일 형식입니다. (JPG, PNG, PDF만 가능)'), false);
+        cb(new Error(`지원하지 않는 파일 형식입니다: ${file.mimetype}. (JPG, PNG, PDF만 가능)`), false);
     }
 };
 

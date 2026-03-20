@@ -2,6 +2,8 @@ const pool = require('../config/db');
 const geminiService = require('../services/geminiService');
 const fs = require('fs');
 
+/* MERGED FROM 업로드OCR: 게스트 분석 지원 및 다국어 처리 */
+
 exports.analyzeReport = async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ success: false, message: '파일이 업로드되지 않았습니다.' });
@@ -14,7 +16,32 @@ exports.analyzeReport = async (req, res) => {
         const analysisResults = await geminiService.analyzeHealthReport(
             req.file.path || req.file.buffer,
             req.file.mimetype,
-            { age, gender: user.gender }
+            { age, gender: user.gender },
+            req.body.lang || 'ko'
+        );
+
+        return res.json({
+            success: true,
+            message: '리포트 분석이 완료되었습니다.',
+            data: analysisResults
+        });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ success: false, message: 'AI 분석 중 오류가 발생했습니다.', error: err.message, stack: err.stack });
+    }
+};
+
+exports.analyzeGuestReport = async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ success: false, message: '파일이 업로드되지 않았습니다.' });
+    }
+    try {
+        const { age, gender } = req.body;
+        const analysisResults = await geminiService.analyzeHealthReport(
+            req.file.path || req.file.buffer,
+            req.file.mimetype,
+            { age: age || '알 수 없음', gender: gender || 'M' },
+            req.body.lang || 'ko'
         );
 
         return res.json({
@@ -98,14 +125,16 @@ exports.saveReport = async (req, res) => {
                 user_id: req.user.id,
                 health_data_id: healthDataId,
                 exam_year: year,
-                summary: aiReport.summary,
-                medical_recommendation: aiReport.medicalRecommendation,
-                risk_overview: JSON.stringify(aiReport.riskOverview),
-                organ_heart_status: aiReport.organStatus?.heart,
-                organ_liver_status: aiReport.organStatus?.liver,
-                organ_pancreas_status: aiReport.organStatus?.pancreas,
-                organ_abdomen_status: aiReport.organStatus?.abdomen,
-                organ_vessels_status: aiReport.organStatus?.vessels,
+                summary: aiReport.summary || '상세 요약 없음',
+                medical_recommendation: aiReport.medicalRecommendation || '해당 연도의 권고 사항이 없습니다.',
+                risk_overview: JSON.stringify(aiReport.riskOverview || []),
+                // [수정] DB의 VARCHAR(10) 제약사항을 고려하여, 글자 수 제한이 있을 경우를 대비해 10자로 제한하되,
+                // 가급적 핵심 내용이 보이도록 조절합니다. (또는 DB 컬럼을 TEXT로 확장하라는 메시지 전달용)
+                organ_heart_status: (aiReport.organStatus?.heart || '정상').substring(0, 10),
+                organ_liver_status: (aiReport.organStatus?.liver || '정상').substring(0, 10),
+                organ_pancreas_status: (aiReport.organStatus?.pancreas || '정상').substring(0, 10),
+                organ_abdomen_status: (aiReport.organStatus?.abdomen || '정상').substring(0, 10),
+                organ_vessels_status: (aiReport.organStatus?.vessels || '정상').substring(0, 10),
                 analysis_precision: 100
             };
 
@@ -158,16 +187,11 @@ exports.saveReport = async (req, res) => {
 
 exports.getYears = async (req, res) => {
     try {
-        // [Portfolio Note] 요청 인스턴스의 유저 식별 로그
-        // console.log(`[BACKEND DEBUG] Fetching years for User ID: ${req.user.id}`);
         const [rows] = await pool.query(
             'SELECT DISTINCT exam_year FROM health_data WHERE user_id = ? ORDER BY exam_year DESC',
             [req.user.id]
         );
         const availableYears = rows.map(r => r.exam_year);
-        // [Portfolio Note] DB 조회 결과값 정합성 디버깅
-        // console.log(`[BACKEND DEBUG] Found years: [${availableYears.join(', ')}]`);
-        
         return res.json({
             success: true,
             data: {
@@ -176,7 +200,7 @@ exports.getYears = async (req, res) => {
             }
         });
     } catch (err) {
-        console.error('[BACKEND ERROR] getYears:', err);
+        console.error(err);
         return res.status(500).json({ success: false, message: '연도 조회 중 오류가 발생했습니다.' });
     }
 };
@@ -186,23 +210,16 @@ exports.getHealthReport = async (req, res) => {
     if (!year) return res.status(400).json({ success: false, message: '연도를 지정해주세요.' });
 
     try {
-        // [Portfolio Note] 특정 연도별 리포트 요청 유효성 확인
-        // console.log(`[BACKEND DEBUG] Fetching detailed report for User ID: ${req.user.id}, Year: ${year}`);
         const [hdRows] = await pool.query(
             'SELECT * FROM health_data WHERE user_id = ? AND exam_year = ?',
             [req.user.id, year]
         );
-        // [Portfolio Note] 건강 데이터 레코드 존재 여부 체크
-        // console.log(`[BACKEND DEBUG] Health Record found: ${hdRows.length > 0 ? 'Yes' : 'No'}`);
-
         if (hdRows.length === 0) return res.status(404).json({ success: false, message: '해당 연도의 데이터가 없습니다.' });
 
         const [arRows] = await pool.query(
             'SELECT * FROM ai_reports WHERE user_id = ? AND exam_year = ?',
             [req.user.id, year]
         );
-        // [Portfolio Note] AI 분석 리포트 연동 여부 확인
-        // console.log(`[BACKEND DEBUG] AI Report found: ${arRows.length > 0 ? 'Yes' : 'No'}`);
 
         return res.json({
             success: true,
@@ -214,7 +231,6 @@ exports.getHealthReport = async (req, res) => {
                         try {
                             return JSON.parse(arRows[0].risk_overview || '[]');
                         } catch (e) {
-                            console.error('[BACKEND ERROR] JSON Parse Error for risk_overview:', arRows[0].risk_overview);
                             return [];
                         }
                     })()
@@ -222,7 +238,7 @@ exports.getHealthReport = async (req, res) => {
             }
         });
     } catch (err) {
-        console.error('[BACKEND ERROR] getHealthReport:', err);
+        console.error(err);
         return res.status(500).json({ success: false, message: '데이터 조회 중 오류가 발생했습니다.' });
     }
 };

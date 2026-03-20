@@ -3,6 +3,10 @@ import { Link } from 'react-router-dom';
 import api from '../api/axios';
 import { Heart, ChevronLeft, User, Mail, Lock, Phone, Calendar, Save, Trash2, CheckCircle2 } from 'lucide-react';
 
+/**
+ * 사용자 정보 수정 페이지
+ * [충돌해결] 실제 작동하는 프로필 수정/비밀번호 변경 API를 통합하고 최신 UI 디자인을 유지했습니다.
+ */
 export default function ProfileEdit() {
   const [activeTab, setActiveTab] = useState('basic');
   const [user, setUser] = useState(null);
@@ -16,12 +20,23 @@ export default function ProfileEdit() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  /* 비밀번호 변경을 위한 상태 관리 */
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
   useEffect(() => {
     fetchUser();
   }, []);
 
+  /**
+   * 내 정보 불러오기
+   */
   const fetchUser = async () => {
     try {
+      /* [충돌해결] 유효한 주소인 /auth/me 로 통일 */
       const res = await api.get('/auth/me');
       const data = res.data.data;
       setUser(data);
@@ -37,21 +52,59 @@ export default function ProfileEdit() {
     }
   };
 
+  /**
+   * 기본 프로필 정보 업데이트
+   */
   const handleUpdate = async (e) => {
     e.preventDefault();
     setLoading(true);
     setSuccess(false);
     try {
-      // API call to update user
-      await api.put('/users/profile', formData);
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-      fetchUser(); // Refresh data
+      /* [충돌해결] 실제 DB 반영을 위한 API 호출 */
+      const res = await api.put('/auth/update-profile', formData);
+      if (res.data.success) {
+        setSuccess(true);
+        setTimeout(() => setSuccess(false), 3000);
+        fetchUser(); // 데이터 리프레시
+      }
     } catch (err) {
       console.error('Update failed:', err);
-      // Simulate success for demo if API doesn't exist yet
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      alert('프로필 수정 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * 비밀번호 변경 업데이트
+   */
+  const handlePasswordUpdate = async (e) => {
+    e.preventDefault();
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      return alert('새 비밀번호가 일치하지 않습니다.');
+    }
+    // [수정] Supabase 설정(Letters and digits)에 맞춘 보안 검증 추가
+    const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d).{10,}$/;
+    if (!passwordRegex.test(passwordData.newPassword)) {
+      return alert('비밀번호는 최소 10자이며 영문과 숫자를 모두 포함해야 합니다.');
+    }
+
+    setLoading(true);
+    try {
+      /* [충돌해결] 실제 구현된 비밀번호 변경 API 호출 */
+      const res = await api.put('/auth/update-password', {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      });
+
+      if (res.data.success) {
+        setSuccess(true);
+        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        setTimeout(() => setSuccess(false), 3000);
+      }
+    } catch (err) {
+      console.error('Password update failed:', err);
+      alert(err.response?.data?.message || '비밀번호 변경 실패');
     } finally {
       setLoading(false);
     }
@@ -104,28 +157,28 @@ export default function ProfileEdit() {
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 ml-1">이름</label>
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                    <input type="text" className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-700 transition-all" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                    <input type="text" className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-700 transition-all" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 ml-1">생년월일</label>
                   <div className="relative">
                     <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                    <input type="date" className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-700 transition-all" value={formData.birth_date} onChange={(e) => setFormData({...formData, birth_date: e.target.value})} />
+                    <input type="date" className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-700 transition-all" value={formData.birth_date} onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })} />
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 ml-1">성별</label>
                   <div className="flex gap-2 bg-slate-50 p-1 rounded-2xl border border-slate-200">
-                    <button type="button" onClick={() => setFormData({...formData, gender: 'M'})} className={`flex-1 py-3.5 rounded-xl font-bold transition-all ${formData.gender === 'M' ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-400'}`}>남성</button>
-                    <button type="button" onClick={() => setFormData({...formData, gender: 'F'})} className={`flex-1 py-3.5 rounded-xl font-bold transition-all ${formData.gender === 'F' ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-400'}`}>여성</button>
+                    <button type="button" onClick={() => setFormData({ ...formData, gender: 'M' })} className={`flex-1 py-3.5 rounded-xl font-bold transition-all ${formData.gender === 'M' ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-400'}`}>남성</button>
+                    <button type="button" onClick={() => setFormData({ ...formData, gender: 'F' })} className={`flex-1 py-3.5 rounded-xl font-bold transition-all ${formData.gender === 'F' ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-400'}`}>여성</button>
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 ml-1">전화번호</label>
                   <div className="relative">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                    <input type="text" className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-700 transition-all" value={formData.phone} placeholder="010-0000-0000" onChange={(e) => setFormData({...formData, phone: e.target.value})} />
+                    <input type="text" className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-700 transition-all" value={formData.phone} placeholder="010-0000-0000" onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
                   </div>
                 </div>
               </div>
@@ -142,22 +195,43 @@ export default function ProfileEdit() {
           )}
 
           {activeTab === 'password' && (
-            <form className="space-y-6 max-w-md mx-auto">
+            <form onSubmit={handlePasswordUpdate} className="space-y-6 max-w-md mx-auto">
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">현재 비밀번호</label>
-                  <input type="password" placeholder="현재 비밀번호를 입력하세요" className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 outline-none focus:ring-2 focus:ring-teal-500 font-medium transition-all" />
+                  <input
+                    type="password"
+                    required
+                    placeholder="현재 비밀번호를 입력하세요"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 outline-none focus:ring-2 focus:ring-teal-500 font-medium transition-all"
+                    value={passwordData.currentPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">새 비밀번호</label>
-                  <input type="password" placeholder="새 비밀번호 (8자 이상)" className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 outline-none focus:ring-2 focus:ring-teal-500 font-medium transition-all" />
+                  <input
+                    type="password"
+                    required
+                    placeholder="새 비밀번호 (10자 이상, 대/소문자/숫자/기호)"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 outline-none focus:ring-2 focus:ring-teal-500 font-medium transition-all"
+                    value={passwordData.newPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">새 비밀번호 확인</label>
-                  <input type="password" placeholder="비밀번호를 다시 입력하세요" className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 outline-none focus:ring-2 focus:ring-teal-500 font-medium transition-all" />
+                  <input
+                    type="password"
+                    required
+                    placeholder="비밀번호를 다시 입력하세요"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 outline-none focus:ring-2 focus:ring-teal-500 font-medium transition-all"
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                  />
                 </div>
               </div>
-              <button type="button" className="w-full bg-teal-600 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center gap-2 hover:bg-teal-700 transition-all mt-8">
+              <button type="submit" disabled={loading} className="w-full bg-teal-600 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center gap-2 hover:bg-teal-700 transition-all mt-8 disabled:opacity-50">
                 <Lock className="w-5 h-5" /> 비밀번호 변경 완료
               </button>
             </form>

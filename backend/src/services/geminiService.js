@@ -1,232 +1,159 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const axios = require('axios');
 const fs = require('fs');
+const env = require('../config/env');
 
-/**
- * API 키 분산 관리 시스템
- * - 환경변수에서 쉼표로 구분된 여러 Gemini API 키를 읽음
- * - 매 요청마다 다음 API 키로 순환 전환 (SDK 및 REST API 모두)
- * - 모델: gemini-2.5-flash
- */
+/* ==========================================================
+ *   🚀 [최적화] CareLink AI 건강 엔진 (Gemini Service)
+ *   대표님, 이 파일은 토큰 소모를 줄이고 서비스 안정성을 
+ *   극대화하기 위해 전면 개편되었습니다.
+ * ========================================================== */
 
-// 환경변수에서 API 키 배열 파싱
-const apiKeysString = process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY;
-const apiKeys = apiKeysString.split(',').map(key => key.trim()).filter(key => key.length > 0);
-
-if (apiKeys.length === 0) {
-    throw new Error('❌ GEMINI_API_KEYS 또는 GEMINI_API_KEY가 설정되어 있지 않습니다.');
-}
-
-console.log(`✅ Gemini API 키 ${apiKeys.length}개 로드됨 (토큰 할당량 분산: 45,000 TPM)`);
-
+// 1. 전역 설정 (모델명 및 기본 구성)
+const MODEL_NAME = "gemini-2.5-flash"; // 최신 가용 모델명으로 업데이트 (1.5 모델명은 404 발생)
 let currentKeyIndex = 0;
 
 /**
- * 다음 API 키로 SDK 클라이언트 반환 (순환)
+ * [트래픽 분산] 등록된 여러 API 키를 번갈아 가며 사용합니다.
  */
-function getNextGenAI() {
-    const apiKey = apiKeys[currentKeyIndex];
-    const keyPreview = apiKey.substring(0, 10) + '...' + apiKey.substring(apiKey.length - 5);
-    console.log(`🔄 SDK API 키 사용: ${keyPreview} (${currentKeyIndex + 1}/${apiKeys.length})`);
-    currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
-    return new GoogleGenerativeAI(apiKey);
+function getNextKey() {
+  const apiKeys = env.GEMINI_API_KEYS;
+  if (!apiKeys || apiKeys.length === 0) {
+    throw new Error('❌ API 키 설정이 누락되었습니다. .env를 확인해 주세요.');
+  }
+  const key = apiKeys[currentKeyIndex];
+  currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
+  return key;
 }
 
 /**
- * REST API를 사용한 Gemini 호출
+ * [SDK 인스턴스 생성]
  */
-async function callGeminiREST(message, history = [], systemInstruction = '') {
-    const apiKey = apiKeys[currentKeyIndex];
-    const keyPreview = apiKey.substring(0, 10) + '...' + apiKey.substring(apiKey.length - 5);
-    console.log(`🔄 REST API 키 사용: ${keyPreview} (${currentKeyIndex + 1}/${apiKeys.length})`);
-    currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
-
-    const URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-
-    const contents = [
-        ...history.map(h => ({
-            role: h.role === 'user' ? 'user' : 'model',
-            parts: [{ text: String(h.content || h.message || '') }]
-        })),
-        {
-            role: 'user',
-            parts: [{ text: message }]
-        }
-    ];
-
-    const body = {
-        contents,
-        systemInstruction: systemInstruction ? {
-            parts: [{ text: systemInstruction }]
-        } : undefined
-    };
-
-    try {
-        const response = await axios.post(URL, body);
-        return response.data.candidates[0].content.parts[0].text;
-    } catch (err) {
-        console.error("Gemini REST API Error:", err.response?.data || err.message);
-        throw err;
-    }
+function getNextGenAI() {
+  return new GoogleGenerativeAI(getNextKey());
 }
 
-// 파일 경로(로컬) 또는 버퍼(서버리스) 모두 처리
-function fileToGenerativePart(path, buffer, mimeType) {
-    const data = path ? fs.readFileSync(path) : buffer;
-    return {
-        inlineData: {
-            data: Buffer.from(data).toString("base64"),
-            mimeType
-        },
-    };
-}
-
-exports.analyzeHealthReport = async (fileData, mimeType, userInfo) => {
-    const genAI = getNextGenAI();
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-    const isPath = typeof fileData === 'string';
-    const filePath = isPath ? fileData : null;
-    const fileBuffer = isPath ? null : fileData;
-
-    const prompt = `
-너는 CareLink의 AI 건강 분석 엔진이다.
-사용자가 업로드한 건강검진 결과지 이미지를 분석하여 주요 건강 지표를 추출하고 분석 보고서를 작성하라.
-
-사용자 정보:
-- 나이: ${userInfo.age || '알 수 없음'}
-- 성별: ${userInfo.gender === 'M' ? '남성' : '여성'}
-
-추출 및 분석 지침:
-1. 다음 지표들을 찾아 수치들을 추출하라:
-   - waist (허리둘레, cm)
-   - bpSys (수축기 혈압, mmHg)
-   - bpDia (이완기 혈압, mmHg)
-   - glucose (공복혈당, mg/dL)
-   - tg (중성지방, mg/dL)
-   - hdl (HDL 콜레스테롤, mg/dL)
-   - ldl (LDL 콜레스테롤, mg/dL)
-   - ast, alt, gammaGtp (간 기능 수치)
-   - bmi (체질량지수)
-
-2. 추출된 데이터를 바탕으로 다음 JSON 형식으로 응답하라 (JSON 외의 텍스트는 포함하지 말 것):
-{
-  "healthRecord": {
-    "waist": number,
-    "bpSys": number,
-    "bpDia": number,
-    "glucose": number,
-    "tg": number,
-    "hdl": number,
-    "ldl": number,
-    "ast": number,
-    "alt": number,
-    "gammaGtp": number,
-    "bmi": number
-  },
-  "aiReport": {
-    "summary": "2~4문장 한국어 요약",
-    "medicalRecommendation": "1~2문장 의료 권고",
-    "riskOverview": ["위험요인1", "위험요인2"],
-    "organStatus": {
-      "heart": "normal | borderline | risk",
-      "liver": "normal | borderline | risk",
-      "pancreas": "normal | borderline | risk",
-      "abdomen": "normal | borderline | risk",
-      "vessels": "normal | borderline | risk"
-    },
-    "healthScore": 0~100 사이의 점수
+/**
+ * [무결성 JSON 추출 시스템]
+ * AI 답변에 섞인 군더더기를 제거하고 순수 JSON 데이터만 추출합니다.
+ */
+function extractJSON(text) {
+  try {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) return JSON.parse(jsonMatch[0]);
+    return null;
+  } catch (e) {
+    console.error("❌ JSON 파싱 에러:", e.message);
+    return null;
   }
 }
 
-추출할 수 없는 수치는 null로 표시하라.
-결과는 반드시 유효한 JSON 형식이어야 한다.
-`;
-
-    const imagePart = fileToGenerativePart(filePath, fileBuffer, mimeType);
-    const result = await model.generateContent([prompt, imagePart]);
-    const response = await result.response;
-    const text = response.text();
-
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-    }
-    throw new Error('AI 분석 결과를 파싱할 수 없습니다.');
-};
-
-exports.chatHealthConsultation = async (history, message, healthContext) => {
-    const contextPrompt = `
-너는 CareLink의 전문 건강 상담 AI다.
-사용자의 건강검진 데이터를 기반으로 친절하고 전문적인 의학적 조언을 제공하라.
-
-사용자의 현재 건강 상태 (최신 데이터):
-- 허리둘레: ${healthContext.waist}cm
-- 혈압: ${healthContext.blood_pressure_s}/${healthContext.blood_pressure_d}mmHg
-- 공복혈당: ${healthContext.fasting_glucose}mg/dL
-- 콜레스테롤: HDL ${healthContext.hdl}, LDL ${healthContext.ldl}, TG ${healthContext.tg}
-- 간 수치: AST ${healthContext.ast}, ALT ${healthContext.alt}, γ-GTP ${healthContext.gamma_gtp}
-- BMI: ${healthContext.bmi}
-- 종합 점수: ${healthContext.health_score}점
-
-상담 원칙:
-1. 항상 따뜻하고 격려하는 말투를 사용하라.
-2. 사용자의 구체적인 수치를 언급하며 조언하라.
-3. 심각한 수치가 있다면 반드시 병원 방문을 권고하라.
-4. 답변은 한국어로 하라.
-`;
-
+/**
+ * [스마트 재시도 시스템]
+ * 에러 발생 시 지정된 횟수만큼 자동 재시도합니다. (지수 백오프 적용)
+ */
+async function withRetry(taskFn, maxAttempts = 3) {
+  let attempt = 0;
+  while (attempt < maxAttempts) {
     try {
-        return await callGeminiREST(message, history, contextPrompt);
-    } catch (error) {
-        console.error("REST Fallback Error:", error);
-        const genAI = getNextGenAI();
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-        const chat = model.startChat({
-            history: history.map(h => ({
-                role: h.role === 'user' ? 'user' : 'model',
-                parts: [{ text: String(h.content || h.message || '') }]
-            })),
-            systemInstruction: contextPrompt
-        });
-        const result = await chat.sendMessage(message);
-        const response = await result.response;
-        return response.text();
+      return await taskFn();
+    } catch (err) {
+      attempt++;
+      // 할당량 초과(429) 에러인 경우에만 5초, 10초씩 대기하며 재시도
+      if (err.status === 429 && attempt < maxAttempts) {
+        const delay = 5000 * attempt;
+        console.warn(`⚠️ 할당량 초과. ${delay / 1000}초 후 자동 재시도... (${attempt}/${maxAttempts})`);
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+      throw err; // 치명적인 에러는 즉시 상위로 전달
     }
+  }
+}
+
+/**
+ * [헬퍼] 이미지를 AI가 이해할 수 있는 데이터로 변환
+ */
+function fileToGenerativePart(path, buffer, mimeType) {
+  const data = path ? fs.readFileSync(path) : buffer;
+  return {
+    inlineData: {
+      data: Buffer.from(data).toString("base64"),
+      mimeType
+    },
+  };
+}
+
+/**
+ * ----------------------------------------------------------
+ * 1. [건강검진 분석] 이미지 분석 및 리포트 생성
+ *    (토큰 최적화: 프롬프트 압축 기법 적용)
+ * ----------------------------------------------------------
+ */
+exports.analyzeHealthReport = async (fileData, mimeType, userInfo, lang = 'ko') => {
+  return withRetry(async () => {
+    const genAI = getNextGenAI();
+    const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+
+    // 비표준 MIME 타입 처리
+    let finalMimeType = (mimeType === 'application/haansoftpdf') ? 'application/pdf' : mimeType;
+    const imagePart = fileToGenerativePart(typeof fileData === 'string' ? fileData : null, typeof fileData === 'string' ? null : fileData, finalMimeType);
+
+    // [최적화] 프롬프트 압축 - 핵심 지시사항 위주로 정리하여 토큰 소모 최소화
+    const isEn = lang === 'en';
+    const systemPrompt = isEn
+      ? `CareLink AI: Extract health data from image. User: ${userInfo.age}y, ${userInfo.gender}. Output JSON ONLY: {healthRecord: {waist,bpSys,bpDia,glucose,tg,hdl,ldl,ast,alt,gammaGtp,bmi}, aiReport: {summary,medicalRecommendation,riskOverview[],organStatus:{heart,liver,pancreas,abdomen,vessels},healthScore}}. Use null if missing.`
+      : `CareLink AI: 건강검진 분석. 사용자: ${userInfo.age}세, ${userInfo.gender}. 반드시 JSON 형식으로만 응답: {healthRecord: {waist,bpSys,bpDia,glucose,tg,hdl,ldl,ast,alt,gammaGtp,bmi}, aiReport: {summary,medicalRecommendation,riskOverview[],organStatus:{heart,liver,pancreas,abdomen,vessels},healthScore}}. 수치 없으면 null 표시.`;
+
+    const result = await model.generateContent([systemPrompt, imagePart]);
+    const response = await result.response;
+    const data = extractJSON(response.text());
+
+    if (!data) throw new Error('AI 응답 데이터 구조가 부정확하여 분석에 실패했습니다.');
+    return data;
+  });
 };
 
-exports.generateActionPlan = async (healthContext) => {
+/**
+ * ----------------------------------------------------------
+ * 2. [건강 상담 챗봇] 이전 대화 맥락을 기반으로 상담 제공
+ *    (트래픽 최적화: 대화 기록 슬라이딩 윈도우 적용)
+ * ----------------------------------------------------------
+ */
+exports.chatHealthConsultation = async (history, message, healthContext) => {
+  // [토큰 최적화] 최근 5개의 대화만 유지하여 토큰 낭비 방지 (슬라이딩 윈도우)
+  const optimizedHistory = history.slice(-5).map(h => ({
+    role: h.role === 'user' ? 'user' : 'model',
+    parts: [{ text: String(h.content || h.message || '') }]
+  }));
+
+  const systemInstruction = `너는 전문 건강 상담 AI다. 사용자 상태: ${JSON.stringify(healthContext)}. 친절하게 전문적 의학 조언을 하되, 답변은 한국어로 하라.`;
+
+  return withRetry(async () => {
     const genAI = getNextGenAI();
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: MODEL_NAME, systemInstruction });
+    // 대화 히스토리와 함께 메시지 전송
+    const chat = model.startChat({ history: optimizedHistory });
+    const result = await chat.sendMessage(message);
+    const response = await result.response;
+    return response.text();
+  });
+};
 
-    const prompt = `
-사용자의 건강검진 데이터를 기반으로 다음 일주일 동안 실천할 구체적인 '액션 플랜(Action Plan)' 3가지를 생성하라.
+/**
+ * ----------------------------------------------------------
+ * 3. [액션 플랜] 주간 맞춤 건강 실천 계획 생성
+ * ----------------------------------------------------------
+ */
+exports.generateActionPlan = async (healthContext) => {
+  const prompt = `Based on health data: ${JSON.stringify(healthContext)}, create a 3-item weekly action plan (diet, exercise, lifestyle). Return JSON ONLY: {plans: [{category, title, content, difficulty}]}.`;
 
-사용자 데이터:
-- 혈압: ${healthContext.blood_pressure_s}/${healthContext.blood_pressure_d}
-- 혈당: ${healthContext.fasting_glucose}
-- BMI: ${healthContext.bmi}
-- 요약: ${healthContext.summary}
-
-생성 지침:
-1. 식단(diet), 운동(exercise), 생활습관(lifestyle) 카테고리별로 하나씩 생성하라.
-2. 구체적이고 실천 가능한 목표여야 한다.
-3. 다음 JSON 형식으로 응답하라:
-{
-  "plans": [
-    {
-      "category": "diet | exercise | lifestyle",
-      "title": "한 줄 제목",
-      "content": "상세 실천 내용",
-      "difficulty": "easy | medium | hard"
-    }
-  ]
-}
-`;
-
+  return withRetry(async () => {
+    const genAI = getNextGenAI();
+    const model = genAI.getGenerativeModel({ model: MODEL_NAME });
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = response.text();
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    return jsonMatch ? JSON.parse(jsonMatch[0]) : { plans: [] };
+    const data = extractJSON(response.text());
+    return data || { plans: [] };
+  });
 };

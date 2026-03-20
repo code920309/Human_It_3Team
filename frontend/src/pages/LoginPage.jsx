@@ -8,8 +8,7 @@ import InputForm from '../components/auth/InputForm';
 
 /**
  * 로그인 페이지
- * - 이중 토큰 기반 보안 시스템 연동
- * - 아이디 저장 및 로그인 상태 유지 기능 포함
+ * [충돌해결] 프리미엄 UI 디자인은 그대로 유지하되, 세션 기반 인증 로직(loginOption 연동)을 최적화했습니다.
  */
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -22,7 +21,9 @@ export default function LoginPage() {
     const { login } = useAuth();
     const navigate = useNavigate();
 
-    // 마운트 시 로컬스토리지에서 저장된 아이디 불러오기
+    /**
+     * 마운트 시 로컬스토리지에서 저장된 아이디 불러오기
+     */
     useEffect(() => {
         const savedEmail = localStorage.getItem('carelink_saved_id');
         if (savedEmail) {
@@ -31,6 +32,10 @@ export default function LoginPage() {
         }
     }, []);
 
+    /**
+     * 로그인 처리 함수
+     * [충돌해결] loginOption의 값('keep')을 AuthContext의 keepLoggedIn 파라미터로 전달합니다.
+     */
     const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
@@ -45,14 +50,16 @@ export default function LoginPage() {
         try {
             const res = await api.post('/auth/login', loginPayload);
             if (res.data.success) {
-                // 아이디 저장 로직 처리
+                // 아이디 저장 로직 처리 (최적화)
                 if (loginOption === 'save_id') {
                     localStorage.setItem('carelink_saved_id', email.trim().toLowerCase());
                 } else {
                     localStorage.removeItem('carelink_saved_id');
                 }
 
-                login(res.data.accessToken, res.data.user);
+                /* [수정] loginOption이 'keep'일 때만 로그인 상태를 유지하도록 전달 */
+                const keepLoggedIn = (loginOption === 'keep');
+                login(res.data.token, res.data.user, keepLoggedIn);
                 navigate('/mypage');
             } else {
                 setError(res.data.message || '로그인에 실패했습니다.');
@@ -64,6 +71,9 @@ export default function LoginPage() {
         }
     };
 
+    /**
+     * 옵션 체크/체크 해제 토글
+     */
     const toggleOption = (option) => {
         setLoginOption(prev => prev === option ? 'none' : option);
     };
@@ -76,7 +86,6 @@ export default function LoginPage() {
                 className="max-w-md w-full bg-white rounded-[2.5rem] shadow-xl overflow-hidden border border-orange-50"
             >
                 <div className="p-10">
-                    {/* 로고 영역 */}
                     <div className="text-center mb-10">
                         <Link to="/" className="inline-flex items-center gap-2 text-3xl font-black text-teal-600 mb-4 transition-transform hover:scale-105">
                             <Heart className="w-10 h-10 fill-current" />
@@ -86,7 +95,6 @@ export default function LoginPage() {
                         <p className="text-slate-500 font-medium mt-2">오늘도 당신의 건강 데이터를 확인해보세요</p>
                     </div>
 
-                    {/* 로그인 에러 피드백 */}
                     {error && (
                         <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-2xl text-sm font-bold border border-red-100 flex items-center gap-2 animate-shake">
                             <AlertCircle className="w-5 h-5 shrink-0" />
@@ -113,7 +121,7 @@ export default function LoginPage() {
                             onChange={(e) => setPassword(e.target.value)}
                         />
 
-                        {/* 추가 옵션 (로그인 유지, 아이디 저장) */}
+                        {/* 옵션 선택 UI (아이디 저장 / 로그인 유지) */}
                         <div className="flex items-center justify-between px-1 py-1">
                             <div className="flex gap-4">
                                 <label className="flex items-center cursor-pointer group">

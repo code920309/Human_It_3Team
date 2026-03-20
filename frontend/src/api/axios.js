@@ -30,7 +30,8 @@ const onRefreshed = (token) => {
  */
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('carelink_token');
+        /* [수정] 로그인 유지(localStorage) 또는 세션(sessionStorage) 토큰 확인 */
+        const token = localStorage.getItem('carelink_token') || sessionStorage.getItem('carelink_token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
